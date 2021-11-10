@@ -1,5 +1,5 @@
-use bevy::prelude::*;
-use bevy_egui::{egui, EguiContext, EguiPlugin, EguiSettings};
+
+use bevy_egui::{egui};
 
 /// USAGE:
 ///

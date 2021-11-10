@@ -1,17 +1,20 @@
-use bevy::{
-    ecs::component::Component,
-    prelude::{Bundle, Handle, Transform},
-};
+use std::fmt::{Display, Formatter, Result};
+
+use bevy::prelude::Bundle;
 use bevy_inspector_egui::Inspectable;
 use bevy_prototype_lyon::entity::ShapeBundle;
-use bevy_inspector_egui::widgets::ReflectedUI;
 
-
-#[derive(Default, Debug, Inspectable)]
+#[derive(Default, Debug, Inspectable, Clone, PartialEq)]
 pub struct InfoText {
     pub name: String,
     #[inspectable(multiline)]
     pub description: String,
+}
+
+impl Display for InfoText {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "Name: {}", self.name)
+    }
 }
 
 #[derive(Default, Debug, Inspectable)]
@@ -46,10 +49,10 @@ pub struct Cargo {
 
 #[derive(Default, Debug, Inspectable)]
 pub struct MovementAbility {
-    pub ground: Option<GroundMovement>,
-    pub air: Option<AirMovement>,
-    pub water: Option<WaterMovement>,
-    pub space: Option<SpaceMovement>,
+    pub ground: GroundMovement,
+    pub air: AirMovement,
+    pub water: WaterMovement,
+    pub space: SpaceMovement,
 }
 
 #[derive(Debug, Inspectable)]
@@ -69,6 +72,7 @@ impl Default for AutonomyLevel {
 
 #[derive(Debug, Inspectable)]
 pub enum GroundMovement {
+    None,
     Wheels(WheelType),
     Tracks(WheelType),
     Legs,
@@ -89,25 +93,26 @@ impl Default for WheelType {
 
 impl Default for GroundMovement {
     fn default() -> Self {
-        Self::Wheels(Default::default())
+        Self::None
     }
 }
 
-
 #[derive(Debug, Inspectable)]
 pub enum AirMovement {
+    None,
     Wings,
     Propellers,
 }
 
 impl Default for AirMovement {
     fn default() -> Self {
-        Self::Propellers
+        Self::None
     }
 }
 
 #[derive(Debug, Inspectable)]
 pub enum WaterMovement {
+    None,
     Jet,
     Sub,
     Propellers,
@@ -115,19 +120,20 @@ pub enum WaterMovement {
 
 impl Default for WaterMovement {
     fn default() -> Self {
-        Self::Propellers
+        Self::None
     }
 }
 
 #[derive(Debug, Inspectable)]
 pub enum SpaceMovement {
+    None,
     Hyperdrive,
     Jump,
 }
 
 impl Default for SpaceMovement {
     fn default() -> Self {
-        Self::Hyperdrive
+        Self::None
     }
 }
 
@@ -144,3 +150,6 @@ pub struct RobotBundle {
     #[bundle]
     pub geometry: ShapeBundle,
 }
+
+
+//! TODO: add resource for storing robot entities (ids)

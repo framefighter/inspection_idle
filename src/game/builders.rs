@@ -20,7 +20,7 @@ impl RobotBuilder {
     #[must_use]
     pub fn new() -> Self {
         let shape = shapes::RegularPolygon {
-            sides: 6,
+            sides: 5,
             feature: shapes::RegularPolygonFeature::Radius(200.0),
             ..shapes::RegularPolygon::default()
         };
@@ -168,72 +168,70 @@ impl MovementAbilityBuilder {
 
     pub fn car() -> Self {
         let mut ability = MovementAbility::default();
-        ability.ground = Some(GroundMovement::Wheels(WheelType::Street));
+        ability.ground = GroundMovement::Wheels(WheelType::Street);
         Self(ability)
     }
 
     pub fn rover() -> Self {
         let mut ability = MovementAbility::default();
-        ability.ground = Some(GroundMovement::Tracks(WheelType::Street));
+        ability.ground = GroundMovement::Tracks(WheelType::Street);
         Self(ability)
     }
 
     pub fn legged() -> Self {
         let mut ability = MovementAbility::default();
-        ability.ground = Some(GroundMovement::Legs);
+        ability.ground = GroundMovement::Legs;
         Self(ability)
     }
 
     pub fn drone() -> Self {
         let mut ability = MovementAbility::default();
-        ability.air = Some(AirMovement::Propellers);
+        ability.air = AirMovement::Propellers;
         Self(ability)
     }
 
     pub fn plane() -> Self {
         let mut ability = MovementAbility::default();
-        ability.air = Some(AirMovement::Wings);
+        ability.air = AirMovement::Wings;
         Self(ability)
     }
 
     pub fn boat() -> Self {
         let mut ability = MovementAbility::default();
-        ability.water = Some(WaterMovement::Propellers);
+        ability.water = WaterMovement::Propellers;
         Self(ability)
     }
 
     pub fn submarine() -> Self {
         let mut ability = MovementAbility::default();
-        ability.water = Some(WaterMovement::Sub);
+        ability.water = WaterMovement::Sub;
         Self(ability)
     }
 
     pub fn ground_movement(mut self, ground_movement: GroundMovement) -> Self {
-        self.0.ground = Some(ground_movement);
+        self.0.ground = ground_movement;
         self
     }
 
     pub fn air_movement(mut self, air_movement: AirMovement) -> Self {
-        self.0.air = Some(air_movement);
+        self.0.air = air_movement;
         self
     }
 
     pub fn water_movement(mut self, water_movement: WaterMovement) -> Self {
-        self.0.water = Some(water_movement);
+        self.0.water = water_movement;
         self
     }
 
     pub fn space_movement(mut self, space_movement: SpaceMovement) -> Self {
-        self.0.space = Some(space_movement);
+        self.0.space = space_movement;
         self
     }
 
     pub fn wheel_type(mut self, wheel_type: WheelType) -> Self {
         match self.0.ground {
-            Some(
-                GroundMovement::Wheels(ref mut _wheel_type)
-                | GroundMovement::Tracks(ref mut _wheel_type),
-            ) => *_wheel_type = wheel_type,
+            GroundMovement::Wheels(ref mut _wheel_type)
+            | GroundMovement::Tracks(ref mut _wheel_type) => *_wheel_type = wheel_type,
             _ => {}
         }
         self

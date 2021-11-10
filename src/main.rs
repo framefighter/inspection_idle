@@ -1,20 +1,19 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use bevy_inspector_egui::InspectorPlugin;
-use bevy_inspector_egui::WorldInspectorPlugin;
+
 use bevy_prototype_lyon::prelude::*;
 
 mod dev;
 mod game;
 mod ui;
 
-use bevy_svg::prelude::{Origin, SvgBuilder, SvgPlugin};
+use bevy_svg::prelude::SvgPlugin;
 use dev::inspector::InspectAllPlugin;
 use game::{
     builders::RobotBuilder,
     types::{Agility, InfoText},
 };
-use ui::sidebar::*;
+use ui::{sidebar::*, types::UiState};
 
 fn main() {
     App::build()
@@ -31,8 +30,8 @@ fn main() {
         .add_startup_system(configure_visuals.system())
         .add_system(update_ui_scale_factor.system())
         .add_system(ui_example.system())
-        .add_system(draw_robots.system())
         .add_system(move_robots.system())
+        // .add_system(update_ui.system())
         .run();
 }
 
@@ -41,15 +40,16 @@ fn setup(mut commands: Commands) {
     RobotBuilder::new()
         .name("This car")
         .car()
-        .max_speed(0.4)
-        .max_turn_speed(0.01)
+        .max_speed(0.5)
+        .max_turn_speed(0.04)
         .spawn(&mut commands);
-}
 
-fn draw_robots(query: Query<(&InfoText, &Transform)>, mut ui_state: ResMut<UiState>) {
-    query.iter().for_each(|(info_text, _)| {
-        ui_state.label = info_text.name.to_owned();
-    });
+    RobotBuilder::new()
+        .name("Not a car")
+        .rover()
+        .max_speed(0.2)
+        .max_turn_speed(0.015)
+        .spawn(&mut commands);
 }
 
 fn move_robots(mut query: Query<(&mut Transform, &Agility)>, keyboard_input: Res<Input<KeyCode>>) {

@@ -1,2 +1,3 @@
 pub mod sidebar;
-mod painting;
+pub mod painting;
+pub mod types;
