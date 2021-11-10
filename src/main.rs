@@ -1,13 +1,15 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use bevy_prototype_lyon::prelude::*;
-use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_inspector_egui::InspectorPlugin;
+use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy_prototype_lyon::prelude::*;
 
+mod dev;
 mod game;
 mod ui;
 
 use bevy_svg::prelude::{Origin, SvgBuilder, SvgPlugin};
+use dev::inspector::InspectAllPlugin;
 use game::{
     builders::RobotBuilder,
     types::{Agility, InfoText},
@@ -23,22 +25,7 @@ fn main() {
         .add_plugin(ShapePlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(SvgPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-        .add_plugin(InspectorPlugin::<InfoText>::new())
-
+        .add_plugin(InspectAllPlugin)
         .add_startup_system(setup.system())
         .add_startup_system(load_assets.system())
         .add_startup_system(configure_visuals.system())
@@ -50,59 +37,13 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    let shape = shapes::RegularPolygon {
-        sides: 6,
-        feature: shapes::RegularPolygonFeature::Radius(200.0),
-        ..shapes::RegularPolygon::default()
-    };
-
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    let geometry = GeometryBuilder::build_as(
-        &shape,
-        ShapeColors::outlined(Color::TEAL, Color::BLACK),
-        DrawMode::Outlined {
-            fill_options: FillOptions::default(),
-            outline_options: StrokeOptions::default().with_line_width(30.0),
-        },
-        Transform::from_scale(Vec3::new(0.1, 0.1, 0.1)),
-    );
-    commands
-        .spawn_bundle(
-            RobotBuilder::new()
-                .name("This car")
-                .car()
-                .max_speed(0.4)
-                .max_turn_speed(0.01)
-                .geometry(geometry)
-                .build(),
-        )
-        .with_children(|parent| {
-            let shape = shapes::RegularPolygon {
-                sides: 3,
-                feature: shapes::RegularPolygonFeature::Radius(200.0),
-                ..shapes::RegularPolygon::default()
-            };
-            parent.spawn_bundle(GeometryBuilder::build_as(
-                &shape,
-                ShapeColors::outlined(Color::TEAL, Color::BLACK),
-                DrawMode::Outlined {
-                    fill_options: FillOptions::default(),
-                    outline_options: StrokeOptions::default().with_line_width(30.0),
-                },
-                Transform::from_matrix(Mat4::from_scale_rotation_translation(
-                    Vec3::splat(0.3),
-                    Quat::default(),
-                    Vec3::new(0.0, 300.0, 0.0),
-                )),
-            ));
-        });
-    // commands.spawn_bundle(
-    //     SvgBuilder::from_file("assets/robots/spot.svg")
-    //         .origin(Origin::Center)
-    //         .position(Vec3::new(0.0, 0.0, 0.0))
-    //         .build()
-    //         .expect("File not found")
-    // );
+    RobotBuilder::new()
+        .name("This car")
+        .car()
+        .max_speed(0.4)
+        .max_turn_speed(0.01)
+        .spawn(&mut commands);
 }
 
 fn draw_robots(query: Query<(&InfoText, &Transform)>, mut ui_state: ResMut<UiState>) {

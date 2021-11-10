@@ -68,7 +68,7 @@ pub fn ui_example(
 
             ui.allocate_space(egui::Vec2::new(1.0, 100.0));
             ui.horizontal(|ui| {
-                load = ui.button("Load").clicked();
+                load = ui.button("Load: 💥").clicked();
                 invert = ui.button("Invert").clicked();
                 remove = ui.button("Remove").clicked();
             });

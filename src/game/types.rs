@@ -2,12 +2,15 @@ use bevy::{
     ecs::component::Component,
     prelude::{Bundle, Handle, Transform},
 };
-use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_inspector_egui::Inspectable;
+use bevy_prototype_lyon::entity::ShapeBundle;
+use bevy_inspector_egui::widgets::ReflectedUI;
+
 
 #[derive(Default, Debug, Inspectable)]
 pub struct InfoText {
     pub name: String,
+    #[inspectable(multiline)]
     pub description: String,
 }
 
@@ -60,7 +63,7 @@ pub enum AutonomyLevel {
 
 impl Default for AutonomyLevel {
     fn default() -> Self {
-        AutonomyLevel::None
+        Self::None
     }
 }
 
@@ -70,8 +73,6 @@ pub enum GroundMovement {
     Tracks(WheelType),
     Legs,
 }
-
-
 
 #[derive(Debug, Inspectable)]
 pub enum WheelType {
@@ -86,10 +87,23 @@ impl Default for WheelType {
     }
 }
 
+impl Default for GroundMovement {
+    fn default() -> Self {
+        Self::Wheels(Default::default())
+    }
+}
+
+
 #[derive(Debug, Inspectable)]
 pub enum AirMovement {
     Wings,
     Propellers,
+}
+
+impl Default for AirMovement {
+    fn default() -> Self {
+        Self::Propellers
+    }
 }
 
 #[derive(Debug, Inspectable)]
@@ -99,10 +113,22 @@ pub enum WaterMovement {
     Propellers,
 }
 
+impl Default for WaterMovement {
+    fn default() -> Self {
+        Self::Propellers
+    }
+}
+
 #[derive(Debug, Inspectable)]
 pub enum SpaceMovement {
     Hyperdrive,
     Jump,
+}
+
+impl Default for SpaceMovement {
+    fn default() -> Self {
+        Self::Hyperdrive
+    }
 }
 
 #[derive(Default, Bundle)]

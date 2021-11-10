@@ -1,5 +1,13 @@
-use bevy::prelude::Transform;
-use bevy_prototype_lyon::entity::ShapeBundle;
+use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{
+    math::Vec3,
+    prelude::{Color, Transform},
+};
+use bevy_prototype_lyon::{
+    entity::ShapeBundle,
+    prelude::{DrawMode, FillOptions, GeometryBuilder, ShapeColors, StrokeOptions},
+    shapes,
+};
 
 use super::types::{
     AirMovement, GroundMovement, MovementAbility, Quality, RobotBundle, Sensor, SpaceMovement,
@@ -11,7 +19,22 @@ pub struct RobotBuilder(RobotBundle);
 impl RobotBuilder {
     #[must_use]
     pub fn new() -> Self {
-        Self(RobotBundle::default())
+        let shape = shapes::RegularPolygon {
+            sides: 6,
+            feature: shapes::RegularPolygonFeature::Radius(200.0),
+            ..shapes::RegularPolygon::default()
+        };
+
+        let geometry = GeometryBuilder::build_as(
+            &shape,
+            ShapeColors::outlined(Color::TEAL, Color::BLACK),
+            DrawMode::Outlined {
+                fill_options: FillOptions::default(),
+                outline_options: StrokeOptions::default().with_line_width(30.0),
+            },
+            Transform::from_scale(Vec3::new(0.1, 0.1, 0.1)),
+        );
+        Self(RobotBundle::default()).geometry(geometry)
     }
 
     pub fn name(mut self, name: &str) -> Self {
@@ -107,6 +130,31 @@ impl RobotBuilder {
     #[must_use]
     pub fn build(self) -> RobotBundle {
         self.0
+    }
+
+    pub fn spawn<'a, 'b>(self, cmd: &'b mut Commands<'a>) -> EntityCommands<'a, 'b> {
+        let mut entity_cmd = cmd.spawn_bundle(self.build());
+        entity_cmd.with_children(|parent: &mut ChildBuilder| {
+            let shape = shapes::RegularPolygon {
+                sides: 3,
+                feature: shapes::RegularPolygonFeature::Radius(200.0),
+                ..shapes::RegularPolygon::default()
+            };
+            parent.spawn_bundle(GeometryBuilder::build_as(
+                &shape,
+                ShapeColors::outlined(Color::TEAL, Color::BLACK),
+                DrawMode::Outlined {
+                    fill_options: FillOptions::default(),
+                    outline_options: StrokeOptions::default().with_line_width(30.0),
+                },
+                Transform::from_matrix(Mat4::from_scale_rotation_translation(
+                    Vec3::splat(0.3),
+                    Quat::default(),
+                    Vec3::new(0.0, 300.0, 0.0),
+                )),
+            ));
+        });
+        entity_cmd
     }
 }
 
