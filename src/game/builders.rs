@@ -9,10 +9,7 @@ use bevy_prototype_lyon::{
     shapes,
 };
 
-use super::types::{
-    AirMovement, GroundMovement, MovementAbility, Quality, RobotBundle, Sensor, SpaceMovement,
-    WaterMovement, WheelType,
-};
+use super::types::{AirMovement, GroundMovement, MovementAbility, Quality, RobotBundle, Robots, Sensor, SpaceMovement, WaterMovement, WheelType};
 
 pub struct RobotBuilder(RobotBundle);
 
@@ -132,7 +129,7 @@ impl RobotBuilder {
         self.0
     }
 
-    pub fn spawn<'a, 'b>(self, cmd: &'b mut Commands<'a>) -> EntityCommands<'a, 'b> {
+    pub fn spawn<'a, 'b>(self, cmd: &'b mut Commands<'a>, robots: &mut ResMut<Robots>) -> EntityCommands<'a, 'b> {
         let mut entity_cmd = cmd.spawn_bundle(self.build());
         entity_cmd.with_children(|parent: &mut ChildBuilder| {
             let shape = shapes::RegularPolygon {
@@ -154,6 +151,7 @@ impl RobotBuilder {
                 )),
             ));
         });
+        robots.robots.push(entity_cmd.id());
         entity_cmd
     }
 }

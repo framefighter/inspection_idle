@@ -5,7 +5,7 @@ use bevy_egui::{
 };
 use bevy_inspector_egui::Inspectable;
 
-use crate::game::types::InfoText;
+use crate::game::types::{InfoText, Robots};
 
 use super::types::UiState;
 
@@ -54,7 +54,11 @@ pub fn update_ui_scale_factor(
     }
 }
 
-pub fn ui_example(mut egui_ctx: ResMut<EguiContext>, query: Query<Entity, &InfoText>) {
+pub fn ui_example(
+    query: Query<(Entity, &InfoText)>,
+    mut egui_ctx: ResMut<EguiContext>,
+    mut robots: ResMut<Robots>,
+) {
     egui::SidePanel::left("side_panel")
         .default_width(200.0)
         .show(egui_ctx.ctx(), |ui| {
@@ -64,41 +68,39 @@ pub fn ui_example(mut egui_ctx: ResMut<EguiContext>, query: Query<Entity, &InfoT
             ui.group(|ui| {
                 ui.label("Robots");
                 ui.separator();
-                query.iter().for_each(|info_text| {
-                    if ui.add(egui::Button::new(&info_text.name)).clicked() {
-                        println!("Robot: {} Selected", info_text.name);
+                query.for_each(|(e, info_text)| {
+                    let selected = robots.selected_robot == Some(e);
+                    if ui
+                        .add(
+                            egui::Button::new(&info_text.name)
+                                .fill(if selected {
+                                    Color32::YELLOW
+                                } else {
+                                    Color32::BLACK
+                                })
+                                .text_color(if selected {
+                                    Color32::BLACK
+                                } else {
+                                    Color32::WHITE
+                                }),
+                        )
+                        .on_hover_ui(|ui| {
+                            ui.label(&info_text.description);
+                            ui.label(format!(
+                                "(click to {})",
+                                if selected { "unselect" } else { "select" }
+                            ));
+                        })
+                        .clicked()
+                    {
+                        if selected {
+                            robots.selected_robot = None;
+                        } else {
+                            robots.selected_robot = Some(e);
+                        }
                     }
-                    ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
-                    ui.separator();
+                    // ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
                 });
             });
         });
 }
-
-// pub fn update_ui(mut ui_state: ResMut<UiState>, query: Query<&InfoText>) {
-//     query.iter().for_each(|info_text| {
-//         ui_state.robots.push(info_text.clone());
-//     });
-// }
-
-// examples:
-
-// egui::TopBottomPanel::top("top_panel").show(egui_ctx.ctx(), |ui| {
-//     // The top panel is often a good place for a menu bar:
-//     egui::menu::bar(ui, |ui| {
-//         egui::menu::menu(ui, "File", |ui| {
-//             if ui.button("Quit").clicked() {
-//                 std::process::exit(0);
-//             }
-//         });
-//     });
-// });
-
-// egui::Window::new("Window")
-//     .scroll(true)
-//     .show(egui_ctx.ctx(), |ui| {
-//         ui.label("Windows can be moved by dragging them.");
-//         ui.label("They are automatically sized based on contents.");
-//         ui.label("You can turn on resizing and scrolling if you like.");
-//         ui.label("You would normally chose either panels OR windows.");
-//     });

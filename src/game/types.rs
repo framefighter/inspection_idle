@@ -1,8 +1,10 @@
-use std::fmt::{Display, Formatter, Result};
+use std::{fmt::{Display, Formatter, Result}, fs::OpenOptions};
 
-use bevy::prelude::Bundle;
+use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
 use bevy_prototype_lyon::entity::ShapeBundle;
+
+use crate::dev::inspector::VecAsDropdown;
 
 #[derive(Default, Debug, Inspectable, Clone, PartialEq)]
 pub struct InfoText {
@@ -152,4 +154,8 @@ pub struct RobotBundle {
 }
 
 
-//! TODO: add resource for storing robot entities (ids)
+#[derive(Default)]
+pub struct Robots {
+    pub robots: Vec<Entity>,
+    pub selected_robot: Option<Entity>,
+}

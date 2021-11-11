@@ -33,7 +33,7 @@ impl Plugin for InspectAllPlugin {
 
 pub struct VecAsDropdown<T>
 where
-    T: Clone + Display + PartialEq,
+    T: Clone + PartialEq,
 {
     pub from: Vec<T>,
     pub selected: usize,
@@ -41,7 +41,7 @@ where
 
 impl<T> VecAsDropdown<T>
 where
-    T: Clone + Display + PartialEq,
+    T: Clone + PartialEq,
 {
     pub fn new(from_vec: Vec<T>) -> Self {
         Self {
@@ -61,7 +61,7 @@ where
 
 impl<T> Default for VecAsDropdown<T>
 where
-    T: Clone + Display + PartialEq,
+    T: Clone + PartialEq,
 {
     fn default() -> Self {
         Self {
@@ -73,7 +73,7 @@ where
 
 impl<T> Inspectable for VecAsDropdown<T>
 where
-    T: Clone + Display + PartialEq + Debug + Default,
+    T: Clone + PartialEq + Debug + Default,
 {
     type Attributes = Vec<T>;
 
@@ -90,10 +90,10 @@ where
         let hash = format!("{:?}", self.from);
 
         bevy_inspector_egui::egui::ComboBox::from_id_source(hash)
-            .selected_text(format!("{}", display))
+            .selected_text(format!("{:?}", display))
             .show_ui(ui, |ui| {
                 for (index, value) in self.from.iter().enumerate() {
-                    ui.selectable_value(&mut self.selected, index, format!("{}", value));
+                    ui.selectable_value(&mut self.selected, index, format!("{:?}", value));
                 }
             });
         true
