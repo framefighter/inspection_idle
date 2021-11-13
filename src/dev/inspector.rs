@@ -4,7 +4,13 @@ use bevy_inspector_egui::{
 };
 use std::fmt::{Debug, Display};
 
-use crate::{game::types::*, ui::types::UiState};
+use crate::{
+    game::{
+        robot::sprite::{GameSprites, SpriteAnimation},
+        types::*,
+    },
+    ui::types::UiState,
+};
 
 pub struct InspectAllPlugin;
 
@@ -18,16 +24,10 @@ impl Plugin for InspectAllPlugin {
         registry.register::<InfoText>();
         registry.register::<Agility>();
         registry.register::<Battery>();
-        registry.register::<Sensor>();
         registry.register::<Quality>();
         registry.register::<Cargo>();
-        registry.register::<MovementAbility>();
         registry.register::<AutonomyLevel>();
-        registry.register::<GroundMovement>();
-        registry.register::<WheelType>();
-        registry.register::<AirMovement>();
-        registry.register::<WaterMovement>();
-        registry.register::<SpaceMovement>();
+        registry.register::<SpriteAnimation>();
     }
 }
 

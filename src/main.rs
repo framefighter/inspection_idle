@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{asset::LoadState, prelude::*, sprite::TextureAtlasBuilder};
 use bevy_egui::EguiPlugin;
 
 use bevy_prototype_lyon::prelude::*;
@@ -7,10 +7,18 @@ mod dev;
 mod game;
 mod ui;
 
-use bevy_rapier2d::{physics::{NoUserData, RapierPhysicsPlugin}, render::RapierRenderPlugin};
+use bevy_rapier2d::{
+    physics::{NoUserData, RapierPhysicsPlugin},
+    render::RapierRenderPlugin,
+};
 use bevy_svg::prelude::SvgPlugin;
 use dev::inspector::InspectAllPlugin;
-use game::{builders::RobotBuilder, physics::{enable_physics_profiling, move_block, setup_graphics, setup_physics}, robot::sprite::{animate_sprite, load_sprites}, types::{Agility, Robots}};
+use game::{
+    builders::RobotBuilder,
+    physics::{enable_physics_profiling, move_block, setup_graphics, setup_physics},
+    robot::sprite::{animate_propulsion, GameSprites, LoadSprites, RobotSprites},
+    types::{Agility, AntennaType, CameraType, GroundPropulsionType, Robots},
+};
 use ui::{sidebar::*, types::UiState};
 
 fn main() {
@@ -19,12 +27,12 @@ fn main() {
         .insert_resource(Msaa { samples: 8 })
         .init_resource::<UiState>()
         .init_resource::<Robots>()
+        .init_resource::<GameSprites>()
         .add_plugins(DefaultPlugins)
         .add_plugin(ShapePlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(SvgPlugin)
         .add_plugin(InspectAllPlugin)
-
         // .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         // .add_plugin(RapierRenderPlugin)
         // .add_startup_system(setup_graphics.system())
@@ -33,39 +41,44 @@ fn main() {
         .add_startup_system(setup.system())
         .add_startup_system(load_assets.system())
         .add_startup_system(configure_visuals.system())
-
-        .add_startup_system(load_sprites.system())
-
         .add_system(update_ui_scale_factor.system())
         .add_system(ui_example.system())
         .add_system(move_robots.system())
-
-        .add_system(animate_sprite.system())
-
+        .add_system(animate_propulsion.system())
         // .add_system(move_block.system())
-
         .run();
 }
 
-fn setup(mut commands: Commands, mut robots: ResMut<Robots>) {
+fn setup(
+    mut commands: Commands,
+    mut robots: ResMut<Robots>,
+    mut game_sprites: ResMut<GameSprites>,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+
+    *game_sprites = GameSprites::load_sprite(&asset_server, &mut materials, "".to_string());
+
     RobotBuilder::new()
         .name("This car")
-        .car()
         .max_speed(0.5)
         .max_turn_speed(0.04)
-        .spawn(&mut commands, &mut robots);
+        .spawn(&mut commands, &mut robots, &game_sprites);
 
     RobotBuilder::new()
         .name("Not a car")
-        .rover()
         .max_speed(0.2)
         .max_turn_speed(0.015)
-        .spawn(&mut commands, &mut robots);
+        .ground_propulsion(GroundPropulsionType::Tracks)
+        .add_camera(CameraType::Hd)
+        // .add_antenna(AntennaType::Simple { bandwidth: 10.0 })
+        .add_antenna(AntennaType::Fancy { bandwidth: 20.0 })
+        .spawn(&mut commands, &mut robots, &game_sprites);
 }
 
 fn move_robots(
-    mut query: Query<(Entity, &mut Transform, &Agility, &mut ShapeColors)>,
+    query: Query<(Entity, &mut Transform, &Agility)>,
     keyboard_input: Res<Input<KeyCode>>,
     robots: Res<Robots>,
 ) {
@@ -77,13 +90,8 @@ fn move_robots(
     ];
     let key_rot_vec = vec![(KeyCode::Q, 1.0), (KeyCode::E, -1.0)];
 
-    query.for_each_mut(|(e, mut transform, agility, mut shape_colors)| {
+    query.for_each_mut(|(e, mut transform, agility)| {
         if robots.selected_robot == Some(e) {
-            *shape_colors = ShapeColors {
-                main: Color::YELLOW,
-                outline: Color::BLACK,
-            };
-
             let mut m_dir = Vec3::new(0.0, 0.0, 0.0);
             let mut a_rot = 0.0;
 

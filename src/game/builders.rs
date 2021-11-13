@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy::{
     math::Vec3,
@@ -9,29 +11,17 @@ use bevy_prototype_lyon::{
     shapes,
 };
 
-use super::types::{AirMovement, GroundMovement, MovementAbility, Quality, RobotBundle, Robots, Sensor, SpaceMovement, WaterMovement, WheelType};
+use crate::game::robot::sprite::SpriteAnimation;
+
+use super::robot::sprite::{GameSprites, RobotSprites};
+use super::types::*;
 
 pub struct RobotBuilder(RobotBundle);
 
 impl RobotBuilder {
     #[must_use]
     pub fn new() -> Self {
-        let shape = shapes::RegularPolygon {
-            sides: 5,
-            feature: shapes::RegularPolygonFeature::Radius(200.0),
-            ..shapes::RegularPolygon::default()
-        };
-
-        let geometry = GeometryBuilder::build_as(
-            &shape,
-            ShapeColors::outlined(Color::TEAL, Color::BLACK),
-            DrawMode::Outlined {
-                fill_options: FillOptions::default(),
-                outline_options: StrokeOptions::default().with_line_width(30.0),
-            },
-            Transform::from_scale(Vec3::new(0.1, 0.1, 0.1)),
-        );
-        Self(RobotBundle::default()).geometry(geometry)
+        Self(RobotBundle::default())
     }
 
     pub fn name(mut self, name: &str) -> Self {
@@ -69,58 +59,166 @@ impl RobotBuilder {
         self
     }
 
-    pub fn add_sensor(mut self, sensor: Sensor) -> Self {
-        self.0.sensors.push(sensor);
-        self
-    }
-
     pub fn quality(mut self, quality: Quality) -> Self {
         self.0.quality = quality;
         self
     }
 
-    pub fn cargo_capacity(mut self, cargo_capacity: f32) -> Self {
-        self.0.cargo.capacity = cargo_capacity;
+    // pub fn robot_model(mut self, model: RobotModel) -> Self {
+    //     self.0.robot_model = model;
+    //     self
+    // }
+
+    // pub fn ground_propulsion(mut self, propulsion_type: GroundPropulsionType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut ground_propulsion_sockets,
+    //                     ..
+    //                 },
+    //         } => match ground_propulsion_sockets {
+    //             [Some(_)] => {}
+    //             [None] => {
+    //                 *ground_propulsion_sockets = [Some(AttachmentPoint::new(propulsion_type))]
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    // pub fn air_propulsion(mut self, propulsion_type: AirPropulsionType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut air_propulsion_sockets,
+    //                     ..
+    //                 },
+    //         } => match air_propulsion_sockets {
+    //             [] => {
+    //                 panic!("base does not support air propulsion")
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    // pub fn water_propulsion(mut self, propulsion_type: WaterPropulsionType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut water_propulsion_sockets,
+    //                     ..
+    //                 },
+    //         } => match water_propulsion_sockets {
+    //             [] => {
+    //                 panic!("base does not support air propulsion")
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    // pub fn add_camera(mut self, camera_type: CameraType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut camera_sockets,
+    //                     ..
+    //                 },
+    //         } => match camera_sockets {
+    //             [None, ..] => *camera_sockets = [Some(AttachmentPoint::new(camera_type)), None],
+    //             [Some(c), None] => {
+    //                 *camera_sockets = [Some(*c), Some(AttachmentPoint::new(camera_type))]
+    //             }
+    //             [Some(_), Some(_)] => {
+    //                 panic!("no more camera space!")
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    // pub fn add_gas_detector(mut self, gas_detector_type: GasDetectorType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut gas_detector_sockets,
+    //                     ..
+    //                 },
+    //         } => match gas_detector_sockets {
+    //             [None, ..] => {
+    //                 gas_detector_sockets[0] = Some(AttachmentPoint::new(gas_detector_type));
+    //             }
+    //             [Some(_), None, Some(_)] => {
+    //                 gas_detector_sockets[1] = Some(AttachmentPoint::new(gas_detector_type));
+    //             }
+    //             [.., None] => {
+    //                 gas_detector_sockets[2] = Some(AttachmentPoint::new(gas_detector_type));
+    //             }
+    //             [Some(_), Some(_), Some(_)] => {
+    //                 panic!("no more gas detector space")
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    // pub fn add_compute_unit(mut self, compute_unit_type: ComputeUnitType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut compute_unit_sockets,
+    //                     ..
+    //                 },
+    //         } => match compute_unit_sockets {
+    //             [None] => compute_unit_sockets[0] = Some(AttachmentPoint::new(compute_unit_type)),
+    //             [Some(_)] => {
+    //                 panic!("no more compute unit space")
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    // pub fn add_antenna(mut self, antenna_type: AntennaType) -> Self {
+    //     match self.0.robot_model {
+    //         RobotModel::Simple {
+    //             attachment_points:
+    //                 AttachmentPoints {
+    //                     ref mut antenna_sockets,
+    //                     ..
+    //                 },
+    //         } => match antenna_sockets {
+    //             [None, ..] => antenna_sockets[0] = Some(AttachmentPoint::new(antenna_type)),
+    //             [Some(_), None] => {
+    //                 antenna_sockets[1] = Some(AttachmentPoint::new(antenna_type));
+    //             }
+    //             [Some(_), Some(_)] => {
+    //                 panic!("no more antenna space")
+    //             }
+    //         },
+    //     }
+    //     self
+    // }
+
+    pub fn add_camera(mut self, camera_type: CameraType) -> Self {
+        self.0.cameras.push(camera_type);
         self
     }
 
-    pub fn car(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::car().build();
+    pub fn add_antenna(mut self, antenna_type: AntennaType) -> Self {
+        self.0.antennas.push(antenna_type);
         self
     }
 
-    pub fn rover(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::rover().build();
-        self
-    }
-
-    pub fn legged(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::legged().build();
-        self
-    }
-
-    pub fn drone(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::drone().build();
-        self
-    }
-
-    pub fn plane(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::plane().build();
-        self
-    }
-
-    pub fn boat(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::boat().build();
-        self
-    }
-
-    pub fn submarine(mut self) -> Self {
-        self.0.movement_ability = MovementAbilityBuilder::submarine().build();
-        self
-    }
-
-    pub fn geometry(mut self, geometry: ShapeBundle) -> Self {
-        self.0.geometry = geometry;
+    pub fn ground_propulsion(mut self, propulsion_type: GroundPropulsionType) -> Self {
+        self.0.ground_propulsion = propulsion_type;
         self
     }
 
@@ -129,114 +227,80 @@ impl RobotBuilder {
         self.0
     }
 
-    pub fn spawn<'a, 'b>(self, cmd: &'b mut Commands<'a>, robots: &mut ResMut<Robots>) -> EntityCommands<'a, 'b> {
+    pub fn spawn<'a, 'b>(
+        self,
+        cmd: &'b mut Commands<'a>,
+        robots: &mut ResMut<Robots>,
+        game_sprites: &GameSprites,
+    ) -> EntityCommands<'a, 'b> {
+        // let robot_sprites = robot_sprites.build_color_vec(&self.0.robot_model);
+        let robot_textures = self.get_textures(game_sprites);
         let mut entity_cmd = cmd.spawn_bundle(self.build());
         entity_cmd.with_children(|parent: &mut ChildBuilder| {
-            let shape = shapes::RegularPolygon {
-                sides: 3,
-                feature: shapes::RegularPolygonFeature::Radius(200.0),
-                ..shapes::RegularPolygon::default()
-            };
-            parent.spawn_bundle(GeometryBuilder::build_as(
-                &shape,
-                ShapeColors::outlined(Color::TEAL, Color::BLACK),
-                DrawMode::Outlined {
-                    fill_options: FillOptions::default(),
-                    outline_options: StrokeOptions::default().with_line_width(30.0),
-                },
-                Transform::from_matrix(Mat4::from_scale_rotation_translation(
-                    Vec3::splat(0.3),
-                    Quat::default(),
-                    Vec3::new(0.0, 300.0, 0.0),
-                )),
-            ));
+            for handle in robot_textures {
+                parent.spawn_bundle(SpriteBundle {
+                    material: handle,
+                    transform: Transform::from_scale(Vec3::splat(2.0)),
+                    ..Default::default()
+                });
+            }
         });
         robots.robots.push(entity_cmd.id());
         entity_cmd
     }
-}
 
-pub struct MovementAbilityBuilder(MovementAbility);
+    pub fn get_textures(&self, game_sprites: &GameSprites) -> Vec<Handle<ColorMaterial>> {
+        let mut sprites = Vec::new();
+        let gp = game_sprites.robots.attachments.ground_propulsion.clone();
 
-impl MovementAbilityBuilder {
-    #[must_use]
-    pub fn new() -> Self {
-        Self(MovementAbility::default())
-    }
-
-    pub fn car() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.ground = GroundMovement::Wheels(WheelType::Street);
-        Self(ability)
-    }
-
-    pub fn rover() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.ground = GroundMovement::Tracks(WheelType::Street);
-        Self(ability)
-    }
-
-    pub fn legged() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.ground = GroundMovement::Legs;
-        Self(ability)
-    }
-
-    pub fn drone() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.air = AirMovement::Propellers;
-        Self(ability)
-    }
-
-    pub fn plane() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.air = AirMovement::Wings;
-        Self(ability)
-    }
-
-    pub fn boat() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.water = WaterMovement::Propellers;
-        Self(ability)
-    }
-
-    pub fn submarine() -> Self {
-        let mut ability = MovementAbility::default();
-        ability.water = WaterMovement::Sub;
-        Self(ability)
-    }
-
-    pub fn ground_movement(mut self, ground_movement: GroundMovement) -> Self {
-        self.0.ground = ground_movement;
-        self
-    }
-
-    pub fn air_movement(mut self, air_movement: AirMovement) -> Self {
-        self.0.air = air_movement;
-        self
-    }
-
-    pub fn water_movement(mut self, water_movement: WaterMovement) -> Self {
-        self.0.water = water_movement;
-        self
-    }
-
-    pub fn space_movement(mut self, space_movement: SpaceMovement) -> Self {
-        self.0.space = space_movement;
-        self
-    }
-
-    pub fn wheel_type(mut self, wheel_type: WheelType) -> Self {
-        match self.0.ground {
-            GroundMovement::Wheels(ref mut _wheel_type)
-            | GroundMovement::Tracks(ref mut _wheel_type) => *_wheel_type = wheel_type,
-            _ => {}
+        match self.0.body {
+            BodyType::Simple => {
+                sprites.push(game_sprites.robots.bodies.simple.colors[0].clone());
+            }
         }
-        self
-    }
 
-    #[must_use]
-    pub fn build(self) -> MovementAbility {
-        self.0
+        match self.0.ground_propulsion {
+            GroundPropulsionType::StreetWheels => {
+                sprites.push(gp.street_wheels.colors[0].clone());
+            }
+            GroundPropulsionType::Tracks => {
+                sprites.push(gp.tracks.colors[0].clone());
+            }
+            _ => {
+                unimplemented!()
+            }
+        }
+
+        self.0.cameras.iter().for_each(|camera| match camera {
+            CameraType::Hd => {
+                sprites.push(game_sprites.robots.attachments.cameras.hd.colors[0].clone());
+            }
+            CameraType::Zoom { zoom, max_zoom } => {
+                let steps = game_sprites.robots.attachments.cameras.zoom.colors.len() as f32;
+                let step = ((zoom * steps) / max_zoom).ceil() as usize;
+
+                sprites.push(game_sprites.robots.attachments.cameras.zoom.colors[step].clone());
+            }
+            CameraType::Wide => {
+                unimplemented!()
+            }
+            CameraType::ThreeSixty => {
+                unimplemented!()
+            }
+            CameraType::LineFollowing => {
+                unimplemented!()
+            }
+        });
+
+        self.0.antennas.iter().for_each(|antenna| match antenna {
+            AntennaType::Simple { .. } => {
+                sprites.push(game_sprites.robots.attachments.antennas.simple.colors[0].clone());
+            }
+            AntennaType::Fancy { .. } => {
+                sprites.push(game_sprites.robots.attachments.antennas.fancy.colors[0].clone());
+            }
+        });
+
+        sprites
     }
 }
