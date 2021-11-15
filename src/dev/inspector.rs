@@ -28,6 +28,18 @@ impl Plugin for InspectAllPlugin {
         registry.register::<Cargo>();
         registry.register::<AutonomyLevel>();
         registry.register::<SpriteAnimation>();
+
+        registry.register::<BodyType>();
+        registry.register::<GroundPropulsionType>();
+        registry.register::<ComputeUnitType>();
+        registry.register::<CameraType>();
+        registry.register::<AntennaType>();
+
+        // registry.register::<OnBoardComputeUnit>();
+        // registry.register::<AdditionalComputeUnits>();
+        // registry.register::<Antennas>();
+        // registry.register::<Cameras>();
+        // registry.register::<GasDetectors>();
     }
 }
 

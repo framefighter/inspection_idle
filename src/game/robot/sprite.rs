@@ -1,9 +1,7 @@
-use std::path::Path;
-
+use crate::game::types::{BodyType, GroundPropulsionType, RobotComponent};
 use bevy::prelude::*;
-use bevy_inspector_egui::{egui::epaint::Tessellator, Inspectable};
-
-use crate::game::types::{AttachmentPoint, AttachmentPoints, GroundPropulsionType, RobotModel};
+use bevy_inspector_egui::Inspectable;
+use std::fmt::Debug;
 
 pub fn animate_propulsion(
     time: Res<Time>,
@@ -48,6 +46,52 @@ pub struct GameSprites {
     pub pois: PoiSprites,
 }
 
+impl GameSprites {
+    pub fn spawn_component<T>(&self, parent: &mut ChildBuilder, component: T)
+    where
+        T: 'static + GetSprite + Sync + Send + Debug,
+    {
+        let material = component.get_material(self);
+        let mut sprite = parent.spawn_bundle(SpriteBundle {
+            material,
+            ..Default::default()
+        });
+        sprite
+            .insert(RobotComponent::new(component, sprite.id()))
+            .insert(Timer::from_seconds(0.1, true));
+    }
+
+    pub fn spawn_components<T>(&self, parent: &mut ChildBuilder, components: Vec<T>)
+    where
+        T: 'static + GetSprite + Sync + Send + Debug,
+    {
+        for component in components {
+            let material = component.get_material(self);
+            let mut sprite = parent.spawn_bundle(SpriteBundle {
+                material,
+                ..Default::default()
+            });
+            sprite
+                .insert(RobotComponent::new(component, sprite.id()))
+                .insert(Timer::from_seconds(0.1, true));
+        }
+    }
+
+    pub fn spawn_component_inactive<T>(&self, parent: &mut ChildBuilder, component: T)
+    where
+        T: 'static + GetSprite + Sync + Send + Debug,
+    {
+        let material = component.get_material(self);
+        let mut sprite = parent.spawn_bundle(SpriteBundle {
+            material,
+            ..Default::default()
+        });
+        let mut comp = RobotComponent::new(component, sprite.id());
+        comp.active = false;
+        sprite.insert(comp).insert(Timer::from_seconds(0.1, true));
+    }
+}
+
 impl LoadSprites for GameSprites {
     fn load_sprite(
         asset_server: &AssetServer,
@@ -85,60 +129,9 @@ impl LoadSprites for RobotSprites {
     }
 }
 
-impl RobotSprites {
-    pub fn build_texture_vec(&self, robot_model: RobotModel) -> Vec<Handle<Texture>> {
-        unimplemented!()
-    }
-
-    pub fn build_color_vec(&self, robot_model: &RobotModel) -> Vec<Handle<ColorMaterial>> {
-        let mut vec = Vec::new();
-
-        match robot_model {
-            RobotModel::Simple {
-                attachment_points:
-                    AttachmentPoints {
-                        ground_propulsion_sockets,
-                        air_propulsion_sockets,
-                        water_propulsion_sockets,
-                        camera_sockets,
-                        gas_detector_sockets,
-                        compute_unit_sockets,
-                        antenna_sockets,
-                    },
-            } => {
-                let gp = self.attachments.clone();
-
-                ground_propulsion_sockets
-                    .iter()
-                    .for_each(|socket| match socket {
-                        Some(AttachmentPoint {
-                            attachment_type, ..
-                        }) => match attachment_type {
-                            GroundPropulsionType::StreetWheels => {
-                                let sprite = gp.ground_propulsion.street_wheels.clone();
-                                vec.push(sprite.colors[sprite.frame].clone());
-                            }
-                            GroundPropulsionType::Tracks => {
-                                let sprite = gp.ground_propulsion.tracks.clone();
-                                vec.push(sprite.colors[sprite.frame].clone());
-                            }
-                            _ => {
-                                unimplemented!()
-                            }
-                        },
-                        _ => {
-                            unimplemented!()
-                        }
-                    });
-            }
-        }
-        vec
-    }
-}
-
 #[derive(Default, Clone)]
 pub struct BodySprites {
-    pub simple: AnimationSprite<2>,
+    pub simple: AnimationSprite,
 }
 
 impl LoadSprites for BodySprites {
@@ -148,7 +141,7 @@ impl LoadSprites for BodySprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 2),
         }
     }
 }
@@ -165,8 +158,8 @@ pub struct AttachmentSprites {
 
 #[derive(Default, Clone)]
 pub struct AntennaSprites {
-    pub simple: AnimationSprite<2>,
-    pub fancy: AnimationSprite<2>,
+    pub simple: AnimationSprite,
+    pub fancy: AnimationSprite,
 }
 
 impl LoadSprites for AntennaSprites {
@@ -176,16 +169,16 @@ impl LoadSprites for AntennaSprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
-            fancy: AnimationSprite::load(asset_server, materials, format!("{}/fancy", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 2),
+            fancy: AnimationSprite::load(asset_server, materials, format!("{}/fancy", path), 2),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct CameraSprites {
-    pub hd: AnimationSprite<1>,
-    pub zoom: AnimationSprite<3>,
+    pub hd: AnimationSprite,
+    pub zoom: AnimationSprite,
 }
 
 impl LoadSprites for CameraSprites {
@@ -195,15 +188,15 @@ impl LoadSprites for CameraSprites {
         path: String,
     ) -> Self {
         Self {
-            hd: AnimationSprite::load(asset_server, materials, format!("{}/hd", path)),
-            zoom: AnimationSprite::load(asset_server, materials, format!("{}/zoom", path)),
+            hd: AnimationSprite::load(asset_server, materials, format!("{}/hd", path), 1),
+            zoom: AnimationSprite::load(asset_server, materials, format!("{}/zoom", path), 3),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct ComputeUnitSprites {
-    pub simple: AnimationSprite<4>,
+    pub simple: AnimationSprite,
 }
 
 impl LoadSprites for ComputeUnitSprites {
@@ -213,16 +206,16 @@ impl LoadSprites for ComputeUnitSprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 4),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct GasDetectorSprites {
-    pub simple: AnimationSprite<1>,
-    pub fancy: AnimationSprite<1>,
-    pub spin: AnimationSprite<8>,
+    pub simple: AnimationSprite,
+    pub fancy: AnimationSprite,
+    pub spin: AnimationSprite,
 }
 
 impl LoadSprites for GasDetectorSprites {
@@ -232,17 +225,17 @@ impl LoadSprites for GasDetectorSprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
-            fancy: AnimationSprite::load(asset_server, materials, format!("{}/fancy", path)),
-            spin: AnimationSprite::load(asset_server, materials, format!("{}/spin", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 1),
+            fancy: AnimationSprite::load(asset_server, materials, format!("{}/fancy", path), 1),
+            spin: AnimationSprite::load(asset_server, materials, format!("{}/spin", path), 8),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct GroundPropulsionSprites {
-    pub street_wheels: AnimationSprite<7>,
-    pub tracks: AnimationSprite<8>,
+    pub street_wheels: AnimationSprite,
+    pub tracks: AnimationSprite,
 }
 
 impl LoadSprites for GroundPropulsionSprites {
@@ -256,15 +249,16 @@ impl LoadSprites for GroundPropulsionSprites {
                 asset_server,
                 materials,
                 format!("{}/street_wheels", path),
+                7,
             ),
-            tracks: AnimationSprite::load(asset_server, materials, format!("{}/tracks", path)),
+            tracks: AnimationSprite::load(asset_server, materials, format!("{}/tracks", path), 8),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct MiscSprites {
-    e_stop: AnimationSprite<1>,
+    e_stop: AnimationSprite,
 }
 
 impl LoadSprites for MiscSprites {
@@ -274,7 +268,7 @@ impl LoadSprites for MiscSprites {
         path: String,
     ) -> Self {
         Self {
-            e_stop: AnimationSprite::load(asset_server, materials, format!("{}/e_stop", path)),
+            e_stop: AnimationSprite::load(asset_server, materials, format!("{}/e_stop", path), 1),
         }
     }
 }
@@ -384,7 +378,7 @@ impl LoadSprites for ManometerSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerBackgroundSprites {
-    simple: AnimationSprite<1>,
+    simple: AnimationSprite,
 }
 
 impl LoadSprites for ManometerBackgroundSprites {
@@ -394,14 +388,14 @@ impl LoadSprites for ManometerBackgroundSprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 1),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct ManometerBaseSprites {
-    simple: AnimationSprite<1>,
+    simple: AnimationSprite,
 }
 
 impl LoadSprites for ManometerBaseSprites {
@@ -411,15 +405,15 @@ impl LoadSprites for ManometerBaseSprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 1),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct ManometerPointerSprites {
-    simple: AnimationSprite<2>,
-    fancy: AnimationSprite<1>,
+    simple: AnimationSprite,
+    fancy: AnimationSprite,
 }
 
 impl LoadSprites for ManometerPointerSprites {
@@ -429,15 +423,15 @@ impl LoadSprites for ManometerPointerSprites {
         path: String,
     ) -> Self {
         Self {
-            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path)),
-            fancy: AnimationSprite::load(asset_server, materials, format!("{}/fancy", path)),
+            simple: AnimationSprite::load(asset_server, materials, format!("{}/simple", path), 2),
+            fancy: AnimationSprite::load(asset_server, materials, format!("{}/fancy", path), 1),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct ManometerRegionSprites {
-    good: AnimationSprite<1>,
+    good: AnimationSprite,
 }
 
 impl LoadSprites for ManometerRegionSprites {
@@ -447,16 +441,16 @@ impl LoadSprites for ManometerRegionSprites {
         path: String,
     ) -> Self {
         Self {
-            good: AnimationSprite::load(asset_server, materials, format!("{}/good", path)),
+            good: AnimationSprite::load(asset_server, materials, format!("{}/good", path), 1),
         }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct ManometerStepsSprites {
-    few: AnimationSprite<1>,
-    medium: AnimationSprite<1>,
-    many: AnimationSprite<1>,
+    few: AnimationSprite,
+    medium: AnimationSprite,
+    many: AnimationSprite,
 }
 
 impl LoadSprites for ManometerStepsSprites {
@@ -466,30 +460,32 @@ impl LoadSprites for ManometerStepsSprites {
         path: String,
     ) -> Self {
         Self {
-            few: AnimationSprite::load(asset_server, materials, format!("{}/few", path)),
-            medium: AnimationSprite::load(asset_server, materials, format!("{}/medium", path)),
-            many: AnimationSprite::load(asset_server, materials, format!("{}/many", path)),
+            few: AnimationSprite::load(asset_server, materials, format!("{}/few", path), 1),
+            medium: AnimationSprite::load(asset_server, materials, format!("{}/medium", path), 1),
+            many: AnimationSprite::load(asset_server, materials, format!("{}/many", path), 1),
         }
     }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct AnimationSprite<const N: usize> {
+pub struct AnimationSprite {
     pub textures: Box<[Handle<Texture>]>,
     pub colors: Box<[Handle<ColorMaterial>]>,
     pub base_name: String,
     pub frame: usize,
+    pub frames: usize,
 }
 
-impl<const N: usize> AnimationSprite<N> {
-    fn load(
+impl AnimationSprite {
+    pub fn load(
         asset_server: &AssetServer,
         materials: &mut ResMut<Assets<ColorMaterial>>,
         base_name: String,
+        frames: usize,
     ) -> Self {
         let mut textures = Vec::new();
         let mut colors = Vec::new();
-        (0..N).into_iter().for_each(|i| {
+        (0..frames).into_iter().for_each(|i| {
             let path = format!("{}_{}.png", base_name, i + 1);
             let handle: Handle<Texture> = asset_server.load(path.as_str());
             let color = materials.add(handle.clone().into());
@@ -501,7 +497,56 @@ impl<const N: usize> AnimationSprite<N> {
             textures: textures.into_boxed_slice(),
             colors: colors.into_boxed_slice(),
             frame: 0,
+            frames,
         }
+    }
+
+    pub fn get_current_material(&self) -> Handle<ColorMaterial> {
+        self.colors[self.frame].clone()
+    }
+
+    pub fn get_initial_material(&self) -> Handle<ColorMaterial> {
+        self.colors[0].clone()
+    }
+
+    pub fn get_initial_texture(&self) -> Handle<Texture> {
+        self.textures[0].clone()
+    }
+
+    pub fn get_material(&self, index: usize) -> Handle<ColorMaterial> {
+        self.colors[index].clone()
+    }
+
+    pub fn get_discrete_material(&self, value: f32, max: f32) -> Handle<ColorMaterial> {
+        let steps = self.colors.len() as f32;
+        let index = ((value * steps) / max).ceil() as usize;
+        if let Some(color) = self.colors.get(index) {
+            color.clone()
+        } else {
+            self.get_initial_material()
+        }
+    }
+
+    pub fn set_discrete_material(&mut self, value: f32, max: f32) -> Handle<ColorMaterial> {
+        let steps = self.colors.len() as f32 - 1.0;
+        let index = ((value * steps) / max).ceil() as usize;
+        if let Some(color) = self.colors.get(index) {
+            self.frame = index;
+            color.clone()
+        } else {
+            self.frame = 0;
+            self.get_initial_material()
+        }
+    }
+
+    pub fn advance(&mut self) -> Handle<ColorMaterial> {
+        self.frame = (self.frame + 1) % self.frames;
+        self.get_current_material()
+    }
+
+    pub fn rewind(&mut self) -> Handle<ColorMaterial> {
+        self.frame = self.frame.wrapping_sub(1).max(0).min(self.frames - 1);
+        self.get_current_material()
     }
 }
 
@@ -511,4 +556,16 @@ pub trait LoadSprites {
         materials: &mut ResMut<Assets<ColorMaterial>>,
         path: String,
     ) -> Self;
+}
+
+pub trait GetSprites {
+    fn get_materials(&self, game_sprites: &GameSprites) -> Vec<Handle<ColorMaterial>>;
+    // fn get_textures(&self, game_sprites: &GameSprites) ->  Vec<Handle<Texture>>;
+}
+
+pub trait GetSprite {
+    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial>;
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite;
+    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite;
+    // fn get_textures(&self, game_sprites: &GameSprites) ->  Vec<Handle<Texture>>;
 }
