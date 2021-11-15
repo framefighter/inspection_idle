@@ -1,13 +1,10 @@
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, Color32, FontDefinitions, FontFamily, Label},
+    egui::{self, Color32, FontDefinitions, FontFamily, Label, PointerState},
     EguiContext, EguiSettings,
 };
-use bevy_inspector_egui::Inspectable;
 
-use crate::game::types::{InfoText, Robots};
-
-use super::types::UiState;
+use crate::game::types::*;
 
 pub fn load_assets(mut egui_context: ResMut<EguiContext>, assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
@@ -55,11 +52,12 @@ pub fn update_ui_scale_factor(
 }
 
 pub fn ui_example(
-    query: Query<(Entity, &InfoText)>,
+    query: Query<(Entity, &InfoText, &Children)>,
+    mut commands: Commands,
     mut egui_ctx: ResMut<EguiContext>,
     mut robots: ResMut<Robots>,
 ) {
-    egui::SidePanel::left("side_panel")
+    egui::Window::new("side_panel")
         .default_width(200.0)
         .show(egui_ctx.ctx(), |ui| {
             ui.heading("Properties");
@@ -68,7 +66,7 @@ pub fn ui_example(
             ui.group(|ui| {
                 ui.label("Robots");
                 ui.separator();
-                query.for_each(|(e, info_text)| {
+                query.for_each(|(e, info_text, children)| {
                     let selected = robots.selected_robot == Some(e);
                     if ui
                         .add(
@@ -99,6 +97,12 @@ pub fn ui_example(
                             robots.selected_robot = Some(e);
                         }
                     }
+
+                    for child in children.iter() {
+                        let p = commands.entity(*child);
+                        
+                    }
+
                     // ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
                 });
             });

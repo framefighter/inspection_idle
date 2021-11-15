@@ -7,8 +7,9 @@ use bevy_inspector_egui::Inspectable;
 use std::fmt::Debug;
 use std::fmt::{Display, Formatter, Result};
 
-use super::robot::sprite::{
-    AnimationSprite, GameSprites, GasDetectorSprites, GetSprite, GetSprites,
+use super::{
+    animation::ComponentAnimation,
+    robot::sprite::{AnimationSprite, GameSprites, GasDetectorSprites, GetSprite, GetSprites},
 };
 
 #[derive(Default, Debug, Inspectable, Clone, PartialEq)]
@@ -72,23 +73,10 @@ impl Default for BodyType {
 }
 
 impl GetSprite for BodyType {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        let sprites = &game_sprites.robots.bodies;
-        match self {
-            Self::Simple => sprites.simple.get_current_material(),
-        }
-    }
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let sprites = &game_sprites.robots.bodies;
         match self {
             Self::Simple => sprites.simple.clone(),
-        }
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        let sprites = &mut game_sprites.robots.bodies;
-        match self {
-            Self::Simple => &mut sprites.simple,
         }
     }
 }
@@ -116,28 +104,11 @@ impl Default for GroundPropulsion {
 }
 
 impl GetSprite for GroundPropulsionType {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        let sprites = &game_sprites.robots.attachments.ground_propulsion;
-        match self.propulsion {
-            GroundPropulsion::StreetWheels => sprites.street_wheels.get_current_material(),
-            GroundPropulsion::Tracks => sprites.tracks.get_current_material(),
-            _ => unimplemented!(),
-        }
-    }
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let sprites = &game_sprites.robots.attachments.ground_propulsion;
         match self.propulsion {
             GroundPropulsion::StreetWheels => sprites.street_wheels.clone(),
             GroundPropulsion::Tracks => sprites.tracks.clone(),
-            _ => unimplemented!(),
-        }
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        let sprites = &mut game_sprites.robots.attachments.ground_propulsion;
-        match self.propulsion {
-            GroundPropulsion::StreetWheels => &mut sprites.street_wheels,
-            GroundPropulsion::Tracks => &mut sprites.tracks,
             _ => unimplemented!(),
         }
     }
@@ -167,47 +138,11 @@ pub enum CameraType {
 }
 
 impl GetSprite for CameraType {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        let cameras = &game_sprites.robots.attachments.cameras;
-        match self {
-            CameraType::Hd => cameras.hd.get_current_material(),
-            CameraType::Zoom { zoom, max_zoom } => {
-                cameras.zoom.get_discrete_material(*zoom, *max_zoom)
-            }
-            CameraType::Wide => {
-                unimplemented!()
-            }
-            CameraType::ThreeSixty => {
-                unimplemented!()
-            }
-            CameraType::LineFollowing => {
-                unimplemented!()
-            }
-        }
-    }
-
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let cameras = &game_sprites.robots.attachments.cameras;
         match self {
             CameraType::Hd => cameras.hd.clone(),
             CameraType::Zoom { .. } => cameras.zoom.clone(),
-            CameraType::Wide => {
-                unimplemented!()
-            }
-            CameraType::ThreeSixty => {
-                unimplemented!()
-            }
-            CameraType::LineFollowing => {
-                unimplemented!()
-            }
-        }
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        let cameras = &mut game_sprites.robots.attachments.cameras;
-        match self {
-            CameraType::Hd => &mut cameras.hd,
-            CameraType::Zoom { .. } => &mut cameras.zoom,
             CameraType::Wide => {
                 unimplemented!()
             }
@@ -229,30 +164,12 @@ pub enum GasDetectorType {
 }
 
 impl GetSprite for GasDetectorType {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        let sprites = &game_sprites.robots.attachments.gas_detectors;
-        match self {
-            GasDetectorType::Simple => sprites.simple.get_current_material(),
-            GasDetectorType::Fancy => sprites.fancy.get_current_material(),
-            GasDetectorType::Spin => sprites.spin.get_current_material(),
-        }
-    }
-
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let sprites = &game_sprites.robots.attachments.gas_detectors;
         match self {
             GasDetectorType::Simple => sprites.simple.clone(),
             GasDetectorType::Fancy => sprites.fancy.clone(),
             GasDetectorType::Spin => sprites.spin.clone(),
-        }
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        let sprites = &mut game_sprites.robots.attachments.gas_detectors;
-        match self {
-            GasDetectorType::Simple => &mut sprites.simple,
-            GasDetectorType::Fancy => &mut sprites.fancy,
-            GasDetectorType::Spin => &mut sprites.spin,
         }
     }
 }
@@ -280,24 +197,10 @@ impl Default for ComputeUnitType {
 }
 
 impl GetSprite for ComputeUnitType {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        let sprites = &game_sprites.robots.attachments.compute_units;
-        match self {
-            ComputeUnitType::Simple { .. } => sprites.simple.get_current_material(),
-        }
-    }
-
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let sprites = &game_sprites.robots.attachments.compute_units;
         match self {
             ComputeUnitType::Simple { .. } => sprites.simple.clone(),
-        }
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        let sprites = &mut game_sprites.robots.attachments.compute_units;
-        match self {
-            ComputeUnitType::Simple { .. } => &mut sprites.simple,
         }
     }
 }
@@ -309,27 +212,11 @@ pub enum AntennaType {
 }
 
 impl GetSprite for AntennaType {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        let sprites = &game_sprites.robots.attachments.antennas;
-        match self {
-            AntennaType::Simple { .. } => sprites.simple.get_current_material(),
-            AntennaType::Fancy { .. } => sprites.fancy.get_current_material(),
-        }
-    }
-
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let sprites = &game_sprites.robots.attachments.antennas;
         match self {
             AntennaType::Simple { .. } => sprites.simple.clone(),
             AntennaType::Fancy { .. } => sprites.fancy.clone(),
-        }
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        let sprites = &mut game_sprites.robots.attachments.antennas;
-        match self {
-            AntennaType::Simple { .. } => &mut sprites.simple,
-            AntennaType::Fancy { .. } => &mut sprites.fancy,
         }
     }
 }
@@ -338,18 +225,17 @@ impl GetSprite for AntennaType {
 pub struct RobotComponent<T: GetSprite + Debug> {
     pub power_draw: f32, // how much power is used per second
     pub active: bool,
-    pub forward: bool,
-    // is the component active?
+    pub animation: ComponentAnimation,
     pub component: T,
     pub sprite: Option<Entity>, // the component itself
 }
 
 impl<T: GetSprite + Debug> RobotComponent<T> {
-    pub fn new(component: T, entity: Entity) -> Self {
+    pub fn new(component: T, entity: Entity, frames: usize) -> Self {
         Self {
             power_draw: 0.0,
             active: true,
-            forward: true,
+            animation: ComponentAnimation::new(frames),
             component,
             sprite: Some(entity),
         }
@@ -359,26 +245,14 @@ impl<T: GetSprite + Debug> RobotComponent<T> {
         self.active = active;
     }
 
-    pub fn forward(&mut self, forward: bool) {
-        self.forward = forward;
-    }
-
     pub fn power_draw(&mut self, power_draw: f32) {
         self.power_draw = power_draw;
     }
 }
 
 impl<T: GetSprite + Debug> GetSprite for RobotComponent<T> {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        self.component.get_material(game_sprites)
-    }
-
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         self.component.get_sprite(game_sprites)
-    }
-
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        self.component.get_sprite_mut(game_sprites)
     }
 }
 
@@ -395,13 +269,20 @@ pub struct Robots {
     pub selected_robot: Option<Entity>,
 }
 
+#[derive(Default, Bundle, Inspectable, Clone)]
+pub struct PoiBundle {
+    pub info_text: InfoText,
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
+}
+
 #[derive(Default, Debug)]
-pub struct ManometerComponent<T: GetSprite + Debug> {
+pub struct PoiComponent<T: GetSprite + Debug> {
     pub component: T,           // the component itself
     pub sprite: Option<Entity>, // the sprite entity
 }
 
-impl<T: GetSprite + Debug> ManometerComponent<T> {
+impl<T: GetSprite + Debug> PoiComponent<T> {
     pub fn new(component: T, sprite: Entity) -> Self {
         Self {
             component,
@@ -410,16 +291,136 @@ impl<T: GetSprite + Debug> ManometerComponent<T> {
     }
 }
 
-impl<T: GetSprite + Debug> GetSprite for ManometerComponent<T> {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial> {
-        self.component.get_material(game_sprites)
-    }
-
+impl<T: GetSprite + Debug> GetSprite for PoiComponent<T> {
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         self.component.get_sprite(game_sprites)
     }
+}
 
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite {
-        self.component.get_sprite_mut(game_sprites)
+#[derive(Inspectable, Clone, Debug)]
+pub enum BackgroundType {
+    Simple,
+}
+
+impl Default for BackgroundType {
+    fn default() -> Self {
+        Self::Simple
+    }
+}
+
+impl GetSprite for BackgroundType {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        let sprites = &game_sprites.pois.manometers.backgrounds;
+        match self {
+            Self::Simple => sprites.simple.clone(),
+        }
+    }
+}
+
+#[derive(Inspectable, Clone, Debug)]
+pub enum BaseType {
+    Simple,
+}
+
+impl Default for BaseType {
+    fn default() -> Self {
+        Self::Simple
+    }
+}
+
+impl GetSprite for BaseType {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        let sprites = &game_sprites.pois.manometers.bases;
+        match self {
+            Self::Simple => sprites.simple.clone(),
+        }
+    }
+}
+
+#[derive(Default, Inspectable, Clone, Debug)]
+pub struct PointerType {
+    pub pointer: PointerSprite,
+    pub angle: f32,
+}
+
+impl PointerType {
+    pub fn new(pointer: PointerSprite) -> Self {
+        Self {
+            pointer,
+            ..Default::default()
+        }
+    }
+}
+
+impl GetSprite for PointerType {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        self.pointer.get_sprite(game_sprites)
+    }
+}
+
+#[derive(Inspectable, Clone, Debug)]
+pub enum PointerSprite {
+    Fancy,
+    Simple,
+}
+
+impl Default for PointerSprite {
+    fn default() -> Self {
+        Self::Simple
+    }
+}
+
+impl GetSprite for PointerSprite {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        let sprites = &game_sprites.pois.manometers.pointers;
+        match self {
+            Self::Simple => sprites.simple.clone(),
+            Self::Fancy => sprites.fancy.clone(),
+
+        }
+    }
+}
+
+#[derive(Inspectable, Clone, Debug)]
+pub enum RegionType {
+    Good,
+}
+
+impl Default for RegionType {
+    fn default() -> Self {
+        Self::Good
+    }
+}
+
+impl GetSprite for RegionType {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        let sprites = &game_sprites.pois.manometers.regions;
+        match self {
+            Self::Good => sprites.good.clone(),
+        }
+    }
+}
+
+#[derive(Inspectable, Clone, Debug)]
+pub enum StepType {
+    Few,
+    Many,
+    Medium,
+}
+
+impl Default for StepType {
+    fn default() -> Self {
+        Self::Few
+    }
+}
+
+impl GetSprite for StepType {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        let sprites = &game_sprites.pois.manometers.steps;
+        match self {
+            Self::Few => sprites.few.clone(),
+            Self::Medium => sprites.medium.clone(),
+            Self::Many => sprites.many.clone(),
+        }
     }
 }

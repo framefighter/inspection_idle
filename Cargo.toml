@@ -11,4 +11,8 @@ bevy-inspector-egui = "0.6.1"
 bevy_prototype_lyon = "0.3.1"
 bevy_svg = "0.3.1"
 bevy_rapier2d = "0.11.0"
-bevy_tilemap = "0.4"
+bevy_ecs_tilemap = "0.4.0"
+bevy_interact_2d = "0.5.3"
+heron = { version = "0.12.1", features = ["2d"] }
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }

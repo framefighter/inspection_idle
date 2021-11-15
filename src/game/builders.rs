@@ -1,5 +1,7 @@
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
+use bevy_interact_2d::{Group, Interactable};
+use heron::prelude::*;
 
 use super::robot::sprite::{GameSprites, GetSprite, GetSprites};
 use super::types::*;
@@ -76,7 +78,25 @@ impl RobotBuilder {
     }
 
     pub fn spawn(self, commands: &mut Commands, game_sprites: &GameSprites) -> Entity {
+        let size = Vec3::splat(48.);
         let mut robot = commands.spawn_bundle(self.clone().build());
+        robot
+            .insert(Interactable {
+                groups: vec![Group(0)],
+                bounding_box: (-size.truncate() / 2., size.truncate() / 2.),
+                ..Default::default()
+            })
+            .insert(RigidBody::Dynamic)
+            .insert(CollisionShape::Cuboid {
+                half_extends: size / 2.,
+                border_radius: None,
+            })
+            .insert(Velocity::default())
+            .insert(PhysicMaterial {
+                friction: 0.99,
+                restitution: 0.01,
+                density: 200.0,
+            });
         robot.with_children(|parent| {
             game_sprites.spawn_components(parent, self.ground_propulsion);
             game_sprites.spawn_components(parent, self.body);
@@ -92,4 +112,94 @@ impl RobotBuilder {
 pub trait Builder<B> {
     #[must_use]
     fn build(self) -> B;
+}
+
+#[derive(Default, Clone)]
+pub struct PoiBuilder {
+    poi_bundle: PoiBundle,
+    background: Vec<BackgroundType>,
+    base: BaseType,
+    pointer: Vec<PointerType>,
+    region: Vec<RegionType>,
+    step: StepType,
+}
+
+impl Builder<PoiBundle> for PoiBuilder {
+    fn build(self) -> PoiBundle {
+        self.poi_bundle
+    }
+}
+impl PoiBuilder {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            poi_bundle: PoiBundle::default(),
+            ..Default::default()
+        }
+    }
+
+    pub fn name(mut self, name: &str) -> Self {
+        self.poi_bundle.info_text.name = name.to_string();
+        self
+    }
+
+    pub fn transform(mut self, transform: Transform) -> Self {
+        self.poi_bundle.transform = transform;
+        self
+    }
+
+    pub fn set_background(mut self, component: BackgroundType) -> Self {
+        self.background.push(component);
+        self
+    }
+
+    pub fn set_base(mut self, component: BaseType) -> Self {
+        self.base = component;
+        self
+    }
+
+    pub fn set_pointer(mut self, component: PointerType) -> Self {
+        self.pointer.push(component);
+        self
+    }
+
+    pub fn set_step(mut self, component: StepType) -> Self {
+        self.step = component;
+        self
+    }
+
+    pub fn add_region(mut self, component: RegionType) -> Self {
+        self.region.push(component);
+        self
+    }
+
+    pub fn spawn(self, commands: &mut Commands, game_sprites: &GameSprites) -> Entity {
+        let size = Vec3::splat(48.);
+        let mut robot = commands.spawn_bundle(self.clone().build());
+        robot
+            .insert(Interactable {
+                groups: vec![Group(0)],
+                bounding_box: (-size.truncate() / 2., size.truncate() / 2.),
+                ..Default::default()
+            })
+            .insert(RigidBody::Static)
+            .insert(CollisionShape::Cuboid {
+                half_extends: size / 2.,
+                border_radius: None,
+            })
+            .insert(Velocity::default())
+            .insert(PhysicMaterial {
+                friction: 0.99,
+                restitution: 0.01,
+                density: 200.0,
+            });
+        robot.with_children(|parent| {
+            game_sprites.spawn_components(parent, self.background);
+            game_sprites.spawn_components(parent, vec![self.base]);
+            game_sprites.spawn_components(parent, self.region);
+            game_sprites.spawn_components(parent, vec![self.step]);
+            game_sprites.spawn_components(parent, self.pointer);
+        });
+        robot.id()
+    }
 }

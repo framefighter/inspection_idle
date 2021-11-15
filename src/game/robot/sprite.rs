@@ -3,36 +3,6 @@ use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
 use std::fmt::Debug;
 
-pub fn animate_propulsion(
-    time: Res<Time>,
-    asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut query: Query<(&mut Timer, &Handle<ColorMaterial>, &mut SpriteAnimation)>,
-) {
-    for (mut timer, mut color, mut sprite_animation) in query.iter_mut() {
-        timer.tick(time.delta());
-        if timer.finished() {
-            let animation_number = (sprite_animation.current_frame + 1) % sprite_animation.frames;
-            sprite_animation.current_frame = animation_number;
-            let path = format!(
-                "{}_{}.png",
-                sprite_animation.sprite_path,
-                animation_number + 1
-            );
-            let handle: Handle<Texture> = asset_server.get_handle(path.as_str());
-            println!("{:?}", handle);
-            // if let Some(material) = materials.get(handle) {
-            let color_mat = materials.get_mut(color).unwrap();
-            color_mat.texture = Some(handle);
-            println!(
-                "changed texture {} | {}",
-                sprite_animation.current_frame, path
-            );
-        }
-        // }
-    }
-}
-
 #[derive(Default, Inspectable)]
 pub struct SpriteAnimation {
     pub sprite_path: String,
@@ -44,6 +14,7 @@ pub struct SpriteAnimation {
 pub struct GameSprites {
     pub robots: RobotSprites,
     pub pois: PoiSprites,
+    pub tiles: TileSprites,
 }
 
 impl GameSprites {
@@ -51,13 +22,17 @@ impl GameSprites {
     where
         T: 'static + GetSprite + Sync + Send + Debug,
     {
-        let material = component.get_material(self);
-        let mut sprite = parent.spawn_bundle(SpriteBundle {
-            material,
+        let sprite = component.get_sprite(self);
+        let mut sprite_bundle = parent.spawn_bundle(SpriteBundle {
+            material: sprite.get_material(0),
             ..Default::default()
         });
-        sprite
-            .insert(RobotComponent::new(component, sprite.id()))
+        sprite_bundle
+            .insert(RobotComponent::new(
+                component,
+                sprite_bundle.id(),
+                sprite.frames,
+            ))
             .insert(Timer::from_seconds(0.1, true));
     }
 
@@ -66,30 +41,10 @@ impl GameSprites {
         T: 'static + GetSprite + Sync + Send + Debug,
     {
         for component in components {
-            let material = component.get_material(self);
-            let mut sprite = parent.spawn_bundle(SpriteBundle {
-                material,
-                ..Default::default()
-            });
-            sprite
-                .insert(RobotComponent::new(component, sprite.id()))
-                .insert(Timer::from_seconds(0.1, true));
+            self.spawn_component(parent, component);
         }
     }
 
-    pub fn spawn_component_inactive<T>(&self, parent: &mut ChildBuilder, component: T)
-    where
-        T: 'static + GetSprite + Sync + Send + Debug,
-    {
-        let material = component.get_material(self);
-        let mut sprite = parent.spawn_bundle(SpriteBundle {
-            material,
-            ..Default::default()
-        });
-        let mut comp = RobotComponent::new(component, sprite.id());
-        comp.active = false;
-        sprite.insert(comp).insert(Timer::from_seconds(0.1, true));
-    }
 }
 
 impl LoadSprites for GameSprites {
@@ -102,6 +57,7 @@ impl LoadSprites for GameSprites {
         Self {
             robots: RobotSprites::load_sprite(asset_server, materials, format!("{}/robots", path)),
             pois: PoiSprites::load_sprite(asset_server, materials, format!("{}/pois", path)),
+            tiles: TileSprites::load_sprite(asset_server, materials, format!("{}/tiles", path)),
         }
     }
 }
@@ -258,7 +214,7 @@ impl LoadSprites for GroundPropulsionSprites {
 
 #[derive(Default, Clone)]
 pub struct MiscSprites {
-    e_stop: AnimationSprite,
+    pub e_stop: AnimationSprite,
 }
 
 impl LoadSprites for MiscSprites {
@@ -333,11 +289,11 @@ impl LoadSprites for PoiSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerSprites {
-    backgrounds: ManometerBackgroundSprites,
-    bases: ManometerBaseSprites,
-    pointers: ManometerPointerSprites,
-    regions: ManometerRegionSprites,
-    steps: ManometerStepsSprites,
+    pub backgrounds: ManometerBackgroundSprites,
+    pub bases: ManometerBaseSprites,
+    pub pointers: ManometerPointerSprites,
+    pub regions: ManometerRegionSprites,
+    pub steps: ManometerStepsSprites,
 }
 
 impl LoadSprites for ManometerSprites {
@@ -378,7 +334,7 @@ impl LoadSprites for ManometerSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerBackgroundSprites {
-    simple: AnimationSprite,
+    pub simple: AnimationSprite,
 }
 
 impl LoadSprites for ManometerBackgroundSprites {
@@ -395,7 +351,7 @@ impl LoadSprites for ManometerBackgroundSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerBaseSprites {
-    simple: AnimationSprite,
+    pub simple: AnimationSprite,
 }
 
 impl LoadSprites for ManometerBaseSprites {
@@ -412,8 +368,8 @@ impl LoadSprites for ManometerBaseSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerPointerSprites {
-    simple: AnimationSprite,
-    fancy: AnimationSprite,
+    pub simple: AnimationSprite,
+    pub fancy: AnimationSprite,
 }
 
 impl LoadSprites for ManometerPointerSprites {
@@ -431,7 +387,7 @@ impl LoadSprites for ManometerPointerSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerRegionSprites {
-    good: AnimationSprite,
+    pub good: AnimationSprite,
 }
 
 impl LoadSprites for ManometerRegionSprites {
@@ -448,9 +404,9 @@ impl LoadSprites for ManometerRegionSprites {
 
 #[derive(Default, Clone)]
 pub struct ManometerStepsSprites {
-    few: AnimationSprite,
-    medium: AnimationSprite,
-    many: AnimationSprite,
+    pub few: AnimationSprite,
+    pub medium: AnimationSprite,
+    pub many: AnimationSprite,
 }
 
 impl LoadSprites for ManometerStepsSprites {
@@ -467,12 +423,45 @@ impl LoadSprites for ManometerStepsSprites {
     }
 }
 
+#[derive(Default, Clone)]
+pub struct TileSprites {
+    pub ground: GroundSprites,
+}
+
+impl LoadSprites for TileSprites {
+    fn load_sprite(
+        asset_server: &AssetServer,
+        materials: &mut ResMut<Assets<ColorMaterial>>,
+        path: String,
+    ) -> Self {
+        Self {
+            ground: GroundSprites::load_sprite(asset_server, materials, format!("{}/ground", path)),
+        }
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct GroundSprites {
+    pub gras: AnimationSprite,
+}
+
+impl LoadSprites for GroundSprites {
+    fn load_sprite(
+        asset_server: &AssetServer,
+        materials: &mut ResMut<Assets<ColorMaterial>>,
+        path: String,
+    ) -> Self {
+        Self {
+            gras: AnimationSprite::load(asset_server, materials, format!("{}/gras", path), 1),
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct AnimationSprite {
     pub textures: Box<[Handle<Texture>]>,
     pub colors: Box<[Handle<ColorMaterial>]>,
     pub base_name: String,
-    pub frame: usize,
     pub frames: usize,
 }
 
@@ -496,25 +485,20 @@ impl AnimationSprite {
             base_name: base_name.to_owned(),
             textures: textures.into_boxed_slice(),
             colors: colors.into_boxed_slice(),
-            frame: 0,
             frames,
         }
     }
 
-    pub fn get_current_material(&self) -> Handle<ColorMaterial> {
-        self.colors[self.frame].clone()
-    }
-
-    pub fn get_initial_material(&self) -> Handle<ColorMaterial> {
-        self.colors[0].clone()
-    }
-
-    pub fn get_initial_texture(&self) -> Handle<Texture> {
-        self.textures[0].clone()
+    pub fn get_all_materials(&self) -> Vec<Handle<ColorMaterial>> {
+        self.colors.to_vec()
     }
 
     pub fn get_material(&self, index: usize) -> Handle<ColorMaterial> {
-        self.colors[index].clone()
+        if let Some(color) = self.colors.get(index) {
+            color.clone()
+        } else {
+            self.get_material(0)
+        }
     }
 
     pub fn get_discrete_material(&self, value: f32, max: f32) -> Handle<ColorMaterial> {
@@ -523,30 +507,8 @@ impl AnimationSprite {
         if let Some(color) = self.colors.get(index) {
             color.clone()
         } else {
-            self.get_initial_material()
+            self.get_material(0)
         }
-    }
-
-    pub fn set_discrete_material(&mut self, value: f32, max: f32) -> Handle<ColorMaterial> {
-        let steps = self.colors.len() as f32 - 1.0;
-        let index = ((value * steps) / max).ceil() as usize;
-        if let Some(color) = self.colors.get(index) {
-            self.frame = index;
-            color.clone()
-        } else {
-            self.frame = 0;
-            self.get_initial_material()
-        }
-    }
-
-    pub fn advance(&mut self) -> Handle<ColorMaterial> {
-        self.frame = (self.frame + 1) % self.frames;
-        self.get_current_material()
-    }
-
-    pub fn rewind(&mut self) -> Handle<ColorMaterial> {
-        self.frame = self.frame.wrapping_sub(1).max(0).min(self.frames - 1);
-        self.get_current_material()
     }
 }
 
@@ -564,8 +526,9 @@ pub trait GetSprites {
 }
 
 pub trait GetSprite {
-    fn get_material(&self, game_sprites: &GameSprites) -> Handle<ColorMaterial>;
+    fn get_material(&self, game_sprites: &GameSprites, index: usize) -> Handle<ColorMaterial> {
+        self.get_sprite(game_sprites).get_material(index)
+    }
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite;
-    fn get_sprite_mut<'a>(&self, game_sprites: &'a mut GameSprites) -> &'a mut AnimationSprite;
     // fn get_textures(&self, game_sprites: &GameSprites) ->  Vec<Handle<Texture>>;
 }

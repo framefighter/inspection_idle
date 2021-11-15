@@ -1,0 +1,93 @@
+{
+	"__header__": {
+		"fileType": "LDtk Project JSON",
+		"app": "LDtk",
+		"doc": "https://ldtk.io/json",
+		"schema": "https://ldtk.io/files/JSON_SCHEMA.json",
+		"appAuthor": "Sebastien 'deepnight' Benard",
+		"appVersion": "0.9.3",
+		"url": "https://ldtk.io"
+	},
+	"jsonVersion": "0.9.3",
+	"nextUid": 3,
+	"worldLayout": "Free",
+	"worldGridWidth": 256,
+	"worldGridHeight": 256,
+	"defaultPivotX": 0,
+	"defaultPivotY": 0,
+	"defaultGridSize": 16,
+	"defaultLevelWidth": 256,
+	"defaultLevelHeight": 256,
+	"bgColor": "#40465B",
+	"defaultLevelBgColor": "#696A79",
+	"minifyJson": false,
+	"externalLevels": true,
+	"exportTiled": true,
+	"imageExportMode": "OneImagePerLayer",
+	"pngFilePattern": null,
+	"backupOnSave": false,
+	"backupLimit": 10,
+	"levelNamePattern": "Level_%idx",
+	"flags": [],
+	"defs": { "layers": [
+		{
+			"__type": "Tiles",
+			"identifier": "Ground_level",
+			"type": "Tiles",
+			"uid": 1,
+			"gridSize": 48,
+			"displayOpacity": 1,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"requiredTags": [],
+			"excludedTags": [],
+			"intGridValues": [{ "value": 1, "identifier": null, "color": "#000000" }],
+			"autoTilesetDefUid": null,
+			"autoRuleGroups": [],
+			"autoSourceLayerDefUid": null,
+			"tilesetDefUid": 2,
+			"tilePivotX": 0,
+			"tilePivotY": 0
+		}
+	], "entities": [], "tilesets": [
+		{
+			"__cWid": 1,
+			"__cHei": 1,
+			"identifier": "Gras_1",
+			"uid": 2,
+			"relPath": "../sprites/tiles/ground/gras_1.png",
+			"pxWid": 48,
+			"pxHei": 48,
+			"tileGridSize": 48,
+			"spacing": 0,
+			"padding": 0,
+			"tagsSourceEnumUid": null,
+			"enumTags": [],
+			"customData": [],
+			"savedSelections": [],
+			"cachedPixelData": { "opaqueTiles": "1", "averageColors": "f120" }
+		}
+	], "enums": [], "externalEnums": [], "levelFields": [] },
+	"levels": [
+		{
+			"identifier": "Level_0",
+			"uid": 0,
+			"worldX": -48,
+			"worldY": 0,
+			"pxWid": 352,
+			"pxHei": 256,
+			"__bgColor": "#696A79",
+			"bgColor": null,
+			"useAutoIdentifier": true,
+			"bgRelPath": null,
+			"bgPos": null,
+			"bgPivotX": 0.5,
+			"bgPivotY": 0.5,
+			"__bgPos": null,
+			"externalRelPath": "basic/0000-Level_0.ldtkl",
+			"fieldInstances": [],
+			"layerInstances": null,
+			"__neighbours": []
+		}
+	]
+}

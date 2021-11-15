@@ -1,0 +1,10 @@
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="8" height="6" tilewidth="48" tileheight="48" infinite="0" backgroundcolor="#696A79" nextlayerid="2" nextobjectid="1">
+	<tileset firstgid="1" name="Gras_1" tilewidth="48" tileheight="48" tilecount="1" columns="1" objectalignment="topleft" margin="0" spacing="0">
+		<image source="../../../sprites/tiles/ground/gras_1.png" width="48" height="48" />
+	</tileset>
+	<layer id="1" name="Ground_level" width="8" height="6" opacity="1">
+		<data encoding="csv">
+			1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+		</data>
+	</layer>
+</map>
