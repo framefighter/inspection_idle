@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, Color32, FontDefinitions, FontFamily, Label, PointerState},
+    egui::{self, Color32, FontDefinitions, FontFamily},
     EguiContext, EguiSettings,
 };
 
 use crate::game::types::*;
 
-pub fn load_assets(mut egui_context: ResMut<EguiContext>, assets: Res<AssetServer>) {
+pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
 
     fonts.font_data.insert(
@@ -54,7 +54,7 @@ pub fn update_ui_scale_factor(
 pub fn ui_example(
     query: Query<(Entity, &InfoText, &Children)>,
     mut commands: Commands,
-    mut egui_ctx: ResMut<EguiContext>,
+    egui_ctx: ResMut<EguiContext>,
     mut robots: ResMut<Robots>,
 ) {
     egui::Window::new("side_panel")
@@ -99,7 +99,7 @@ pub fn ui_example(
                     }
 
                     for child in children.iter() {
-                        let p = commands.entity(*child);
+                        let _p = commands.entity(*child);
                         
                     }
 

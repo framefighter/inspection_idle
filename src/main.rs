@@ -1,41 +1,35 @@
 use bevy::input::mouse::MouseMotion;
-use bevy::prelude::shape::Quad;
+
 use bevy::render::camera::{Camera, CameraProjection};
 use bevy::{
-    asset::LoadState,
-    ecs::{component::Component, system::EntityCommands},
+    ecs::{component::Component},
     input::mouse::MouseWheel,
     prelude::*,
     render::camera::OrthographicProjection,
-    sprite::TextureAtlasBuilder,
 };
 use bevy_ecs_tilemap::TilemapPlugin;
 use bevy_egui::{EguiContext, EguiPlugin};
 use bevy_interact_2d::{
-    Group, Interactable, InteractionDebugPlugin, InteractionSource, InteractionState,
+    Group, InteractionDebugPlugin, InteractionSource, InteractionState,
 };
-use bevy_prototype_lyon::prelude::*;
+
 use game::animation::AnimationDirection;
 use game::types::PointerType;
-use std::{fmt::Debug, io::Seek};
+use std::{fmt::Debug};
 
 mod dev;
 mod game;
 mod ui;
 
 use bevy_ecs_tilemap::prelude::*;
-use bevy_rapier2d::{
-    physics::{NoUserData, RapierPhysicsPlugin},
-    render::RapierRenderPlugin,
-};
-use bevy_svg::prelude::SvgPlugin;
+
+
 use dev::inspector::InspectAllPlugin;
 use game::{
     builders::{Builder, RobotBuilder},
-    physics::{enable_physics_profiling, move_block, setup_graphics, setup_physics},
-    robot::sprite::{GameSprites, GetSprite, GetSprites, LoadSprites, RobotSprites},
+    robot::sprite::{GameSprites, GetSprite, LoadSprites},
     types::{
-        Agility, AntennaType, BodyType, CameraType, ComputeUnitType, GasDetectorType,
+        AntennaType, BodyType, CameraType, ComputeUnitType, GasDetectorType,
         GroundPropulsion, GroundPropulsionType, RobotComponent, Robots,
     },
 };
@@ -465,7 +459,7 @@ fn interaction_state(
         return;
     }
 
-    for (entity, coords) in interaction_state.get_group(Group(0)).iter() {
+    for (entity, _coords) in interaction_state.get_group(Group(0)).iter() {
         robots.selected_robot = Some(*entity);
     }
 }

@@ -1,4 +1,4 @@
-use crate::game::types::{BodyType, GroundPropulsionType, RobotComponent};
+use crate::game::types::{RobotComponent};
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
 use std::fmt::Debug;

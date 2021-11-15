@@ -2,11 +2,11 @@ use bevy::prelude::{AppBuilder, Plugin};
 use bevy_inspector_egui::{
     Inspectable, InspectableRegistry, InspectorPlugin, WorldInspectorPlugin,
 };
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug};
 
 use crate::{
     game::{
-        robot::sprite::{GameSprites, SpriteAnimation},
+        robot::sprite::{SpriteAnimation},
         types::*,
     },
     ui::types::UiState,

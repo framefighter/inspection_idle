@@ -1,4 +1,4 @@
-use bevy::{ecs::component::Component, input::mouse::MouseMotion, prelude::*};
+use bevy::{prelude::*};
 use bevy_rapier2d::{
     na::{Isometry2, Vector2},
     prelude::*,
@@ -84,7 +84,7 @@ pub fn setup_physics(mut commands: Commands) {
 }
 
 pub fn move_block(
-    mut query: Query<&mut RigidBodyPosition, With<FirstBlock>>,
+    query: Query<&mut RigidBodyPosition, With<FirstBlock>>,
     mut mouse_moved_events: EventReader<CursorMoved>,
 ) {
     for event in mouse_moved_events.iter() {

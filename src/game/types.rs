@@ -1,7 +1,5 @@
 use bevy::{
     prelude::*,
-    render::camera::{self, Camera},
-    transform,
 };
 use bevy_inspector_egui::Inspectable;
 use std::fmt::Debug;
@@ -9,7 +7,7 @@ use std::fmt::{Display, Formatter, Result};
 
 use super::{
     animation::ComponentAnimation,
-    robot::sprite::{AnimationSprite, GameSprites, GasDetectorSprites, GetSprite, GetSprites},
+    robot::sprite::{AnimationSprite, GameSprites, GetSprite},
 };
 
 #[derive(Default, Debug, Inspectable, Clone, PartialEq)]
