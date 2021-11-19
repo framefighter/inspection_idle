@@ -127,7 +127,21 @@ pub enum WaterPropulsionType {
 
 #[derive(Clone, Copy, Inspectable, Debug)]
 
-pub enum CameraType {
+pub struct CameraType {
+    pub inspection_range: f32,
+    pub fov: f32,
+    pub camera: CameraSensor,
+}
+
+impl GetSprite for CameraType {
+    fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
+        self.camera.get_sprite(game_sprites)
+    }
+}
+
+
+#[derive(Clone, Copy, Inspectable, Debug)]
+pub enum CameraSensor {
     Zoom { max_zoom: f32, zoom: f32 },
     Wide,
     ThreeSixty,
@@ -135,19 +149,19 @@ pub enum CameraType {
     LineFollowing,
 }
 
-impl GetSprite for CameraType {
+impl GetSprite for CameraSensor {
     fn get_sprite(&self, game_sprites: &GameSprites) -> AnimationSprite {
         let cameras = &game_sprites.robots.attachments.cameras;
         match self {
-            CameraType::Hd => cameras.hd.clone(),
-            CameraType::Zoom { .. } => cameras.zoom.clone(),
-            CameraType::Wide => {
+            Self::Hd => cameras.hd.clone(),
+            Self::Zoom { .. } => cameras.zoom.clone(),
+            Self::Wide => {
                 unimplemented!()
             }
-            CameraType::ThreeSixty => {
+            Self::ThreeSixty => {
                 unimplemented!()
             }
-            CameraType::LineFollowing => {
+            Self::LineFollowing => {
                 unimplemented!()
             }
         }

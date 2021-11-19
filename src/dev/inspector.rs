@@ -4,13 +4,7 @@ use bevy_inspector_egui::{
 };
 use std::fmt::{Debug};
 
-use crate::{
-    game::{
-        robot::sprite::{SpriteAnimation},
-        types::*,
-    },
-    ui::types::UiState,
-};
+use crate::{game::{robot::sprite::{RobotAssets, SpriteAnimation}, types::*}, ui::types::UiState};
 
 pub struct InspectAllPlugin;
 

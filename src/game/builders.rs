@@ -1,9 +1,8 @@
-
 use bevy::prelude::*;
 use bevy_interact_2d::{Group, Interactable};
 use heron::prelude::*;
 
-use super::robot::sprite::{GameSprites};
+use super::robot::sprite::GameSprites;
 use super::types::*;
 
 #[derive(Default, Clone)]

@@ -16,3 +16,6 @@ bevy_interact_2d = "0.5.3"
 heron = { version = "0.12.1", features = ["2d"] }
 rand = "0.8"
 getrandom = { version = "0.2", features = ["js"] }
+bevy_asset_loader = "0.6.0"
+bevy_asset_ron = "0.2.0"
+serde = "1.0.130"

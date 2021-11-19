@@ -1,7 +1,52 @@
-use crate::game::types::{RobotComponent};
-use bevy::prelude::*;
+use crate::game::types::RobotComponent;
+use bevy::{asset::Asset, prelude::*, reflect::TypeUuid, utils::HashMap};
+use bevy_asset_loader::AssetCollection;
 use bevy_inspector_egui::Inspectable;
+use bevy_interact_2d::{Group, Interactable};
+use heron::{CollisionShape, RigidBody};
 use std::fmt::Debug;
+
+pub enum AssetHierarchy {
+    Parent(Handle<AssetDescription>, Vec<AssetHierarchy>),
+    Child(Handle<AssetDescription>),
+}
+
+#[derive(serde::Deserialize, TypeUuid, Inspectable, Debug, Reflect, Clone, Copy)]
+#[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f8"]
+pub struct AssetDescription {
+    pub size: (f32, f32),
+    pub translation: (f32, f32),
+    pub rotation: f32,
+    pub frames: usize,
+}
+
+#[derive(Debug, Default)]
+pub struct SpriteAssets {
+    pub assets: HashMap<Handle<AssetDescription>, Handle<TextureAtlas>>,
+}
+
+impl SpriteAssets {
+    pub fn add(&mut self, key: Handle<AssetDescription>, value: Handle<TextureAtlas>) {
+        self.assets.insert(key, value);
+    }
+    pub fn get(&self, key: &Handle<AssetDescription>) -> Option<&Handle<TextureAtlas>> {
+        self.assets.get(key)
+    }
+}
+
+#[derive(AssetCollection, Inspectable, Reflect)]
+pub struct RobotAssets {
+    #[asset(path = "sprites/simple_tracks.ad")]
+    pub simple_tracks: Handle<AssetDescription>,
+
+    #[asset(path = "sprites/simple_body.ad")]
+    pub simple_body: Handle<AssetDescription>,
+
+    #[asset(path = "sprites/camera_hd.ad")]
+    pub camera_hd: Handle<AssetDescription>,
+    #[asset(path = "sprites/camera_zoom.ad")]
+    pub camera_zoom: Handle<AssetDescription>,
+}
 
 #[derive(Default, Inspectable)]
 pub struct SpriteAnimation {
@@ -33,7 +78,24 @@ impl GameSprites {
                 sprite_bundle.id(),
                 sprite.frames,
             ))
-            .insert(Timer::from_seconds(0.1, true));
+            .insert(Timer::from_seconds(0.1, true))
+            .with_children(|child| {
+                child
+                    .spawn_bundle((
+                        Transform::from_xyz(0.0, 0.0, 0.0),
+                        GlobalTransform::default(),
+                    ))
+                    .insert(RigidBody::Sensor)
+                    .insert(CollisionShape::Cuboid {
+                        half_extends: Vec3::splat(88.0),
+                        border_radius: None,
+                    })
+                    .insert(Interactable {
+                        groups: vec![Group(2)],
+                        bounding_box: (-Vec2::splat(88.0) / 2., Vec2::splat(88.0) / 2.),
+                        ..Default::default()
+                    });
+            });
     }
 
     pub fn spawn_components<T>(&self, parent: &mut ChildBuilder, components: Vec<T>)
@@ -44,7 +106,6 @@ impl GameSprites {
             self.spawn_component(parent, component);
         }
     }
-
 }
 
 impl LoadSprites for GameSprites {
