@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, Color32, FontDefinitions, FontFamily},
+    egui::{self, FontDefinitions, FontFamily},
     EguiContext, EguiSettings,
 };
 

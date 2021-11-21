@@ -5,7 +5,7 @@ use crate::game::loader::item::SpawnItem;
 
 use bevy::render::camera::{Camera, CameraProjection};
 use bevy::{
-    ecs::component::Component, input::mouse::MouseWheel, prelude::*,
+    input::mouse::MouseWheel, prelude::*,
     render::camera::OrthographicProjection,
 };
 use bevy_asset_ron::RonAssetPlugin;
@@ -144,7 +144,7 @@ fn animate_sprite_system(
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    _materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
@@ -156,7 +156,7 @@ fn setup(
     asset_server.watch_for_changes().unwrap();
 }
 
-fn startup(mut commands: Commands, mut map_query: MapQuery) {
+fn startup(_commands: Commands, _map_query: MapQuery) {
     // let material_handle = // TODO
 
     // let map_entity = commands.spawn().id();
@@ -250,7 +250,7 @@ fn interaction_state(
         return;
     }
 
-    for (entity, _coords) in interaction_state.get_group(Group(0)).iter() {
+    for (_entity, _coords) in interaction_state.get_group(Group(0)).iter() {
         // robots.selected_robot = Some(*entity);
     }
 }
