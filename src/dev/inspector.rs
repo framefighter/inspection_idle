@@ -2,9 +2,9 @@ use bevy::prelude::{AppBuilder, Plugin};
 use bevy_inspector_egui::{
     Inspectable, InspectableRegistry, InspectorPlugin, WorldInspectorPlugin,
 };
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
-use crate::{game::{robot::sprite::{RobotAssets, SpriteAnimation}, types::*}, ui::types::UiState};
+use crate::{game::{loader::{item::Item, sprite_asset::SpriteAsset}, robot::sprite::SpriteAnimation, types::*}, ui::types::UiState};
 
 pub struct InspectAllPlugin;
 
@@ -28,6 +28,9 @@ impl Plugin for InspectAllPlugin {
         registry.register::<ComputeUnitType>();
         registry.register::<CameraType>();
         registry.register::<AntennaType>();
+
+        registry.register::<Item>();
+        registry.register::<SpriteAsset>();
 
         // registry.register::<OnBoardComputeUnit>();
         // registry.register::<AdditionalComputeUnits>();

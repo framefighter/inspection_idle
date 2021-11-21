@@ -1,0 +1,26 @@
+(
+    size: 1,
+    item_type: Body,
+    attachment_points: ({
+      MainCamera: (
+        position: (-10., 20., 2.),
+        rotation: 0.,
+        item_types: [
+            Camera,
+        ],
+        max_item_size: 1,
+      ),
+      GroundPropulsion: (
+        position: (0., 0., 0.),
+        rotation: 0.,
+        item_types: [
+            GroundPropulsion,
+        ],
+        max_item_size: 1,
+      ),
+    }),
+    sprite: (
+        size: (36., 32.),
+        frames: 2,
+    )
+)

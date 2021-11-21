@@ -1,4 +1,4 @@
-use crate::game::types::RobotComponent;
+use crate::game::{loader::item::Item, types::RobotComponent};
 use bevy::{asset::Asset, prelude::*, reflect::TypeUuid, utils::HashMap};
 use bevy_asset_loader::AssetCollection;
 use bevy_inspector_egui::Inspectable;
@@ -6,61 +6,7 @@ use bevy_interact_2d::{Group, Interactable};
 use heron::{CollisionShape, RigidBody};
 use std::fmt::Debug;
 
-#[derive(serde::Deserialize, Inspectable, Debug, Reflect, Clone, Copy)]
-pub enum AttachmentType {
-    Camera(usize),
-    Body,
-    Frame,
-}
 
-#[derive(serde::Deserialize, Inspectable, Debug, Reflect, Clone, Copy)]
-pub struct AttachmentInfo {
-    position: (f32, f32),
-    attachment_type: AttachmentType,
-}
-
-#[derive(serde::Deserialize,TypeUuid, Debug, Reflect, Clone)]
-#[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f9"]
-pub struct RobotConfig {
-    attachment_infos: HashMap<usize, AttachmentInfo>,
-}
-
-#[derive(serde::Deserialize, TypeUuid, Inspectable, Debug, Reflect, Clone, Copy)]
-#[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f8"]
-pub struct AssetDescription {
-    pub size: (f32, f32),
-    pub attachment_type: AttachmentType,
-    pub rotation: f32,
-    pub frames: usize,
-}
-
-#[derive(Debug, Default)]
-pub struct SpriteAssets {
-    pub assets: HashMap<Handle<AssetDescription>, Handle<TextureAtlas>>,
-}
-
-impl SpriteAssets {
-    pub fn add(&mut self, key: Handle<AssetDescription>, value: Handle<TextureAtlas>) {
-        self.assets.insert(key, value);
-    }
-    pub fn get(&self, key: &Handle<AssetDescription>) -> Option<&Handle<TextureAtlas>> {
-        self.assets.get(key)
-    }
-}
-
-#[derive(AssetCollection, Inspectable, Reflect)]
-pub struct RobotAssets {
-    #[asset(path = "sprites/simple_tracks.ad")]
-    pub simple_tracks: Handle<AssetDescription>,
-
-    #[asset(path = "sprites/simple_body.ad")]
-    pub simple_body: Handle<AssetDescription>,
-
-    #[asset(path = "sprites/camera_hd.ad")]
-    pub camera_hd: Handle<AssetDescription>,
-    #[asset(path = "sprites/camera_zoom.ad")]
-    pub camera_zoom: Handle<AssetDescription>,
-}
 
 #[derive(Default, Inspectable)]
 pub struct SpriteAnimation {

@@ -1,5 +1,7 @@
 use bevy::input::mouse::MouseMotion;
 
+use crate::game::loader::item::AttachTo;
+use crate::game::loader::item::SpawnItem;
 use bevy::reflect::DynamicStruct;
 use bevy::render::camera::{Camera, CameraProjection};
 use bevy::{
@@ -10,12 +12,12 @@ use bevy_asset_ron::RonAssetPlugin;
 use bevy_ecs_tilemap::TilemapPlugin;
 use bevy_egui::{EguiContext, EguiPlugin};
 use bevy_interact_2d::{Group, InteractionDebugPlugin, InteractionSource, InteractionState};
-
 use game::animation::AnimationDirection;
-use game::robot::sprite::{AssetDescription, RobotAssets, RobotConfig, SpriteAssets};
+use game::loader::information::InformationCollection;
+use game::loader::item::{AttachmentPointId, Item, ItemCollection};
+use game::loader::sprite_asset::SpriteAsset;
 use game::types::PointerType;
 use std::fmt::Debug;
-
 mod dev;
 mod game;
 mod ui;
@@ -37,6 +39,7 @@ use rand::prelude::*;
 use ui::{sidebar::*, types::UiState};
 
 use crate::game::builders::PoiBuilder;
+use crate::game::loader::information::Information;
 use crate::game::types::{BackgroundType, CameraSensor, PointerSprite, RegionType};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
@@ -51,7 +54,7 @@ fn main() {
     app.add_state(GameState::AssetLoading)
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .insert_resource(Msaa { samples: 8 })
-        .init_resource::<SpriteAssets>()
+        .init_resource::<InformationCollection>()
         .init_resource::<UiState>()
         .init_resource::<Robots>()
         .init_resource::<GameSprites>()
@@ -61,127 +64,110 @@ fn main() {
         .add_plugin(TilemapPlugin)
         .add_plugin(InteractionDebugPlugin)
         .add_plugin(PhysicsPlugin::default())
-        .add_plugin(RonAssetPlugin::<AssetDescription>::new(&["ad"]))
-        .add_plugin(RonAssetPlugin::<RobotConfig>::new(&["rc"]));
+        .add_plugin(RonAssetPlugin::<Item>::new(&["it"]));
     AssetLoader::new(GameState::AssetLoading, GameState::Next)
-        .with_collection::<RobotAssets>()
+        .with_collection::<ItemCollection>()
         .build(&mut app);
-    app.add_startup_system(setup.system().chain(startup.system()))
-        .add_startup_system(load_assets.system())
-        .add_startup_system(configure_visuals.system())
-        .add_startup_system(setup_assets.system())
-        .add_system(update_ui_scale_factor.system())
-        .add_system(ui_example.system())
-        .add_system(move_robots.system())
-        .add_system(control_camera_zoom.system())
-        .add_system(increase_memory.system())
-        .add_system(zoom_camera.system())
-        .add_system(move_camera.system())
-        .add_system(interaction_state.system())
-        .add_system(move_pointer.system().chain(update_pointer.system()))
-        .add_system(animate::<BodyType>.system())
-        .add_system(animate::<GasDetectorType>.system())
-        .add_system(animate::<AntennaType>.system())
-        .add_system(animate::<GroundPropulsionType>.system())
-        .add_system(animate_step::<CameraType>.system())
-        .add_system(animate_step::<ComputeUnitType>.system())
-        .add_system(update_sprites::<BodyType>.system())
-        .add_system(update_sprites::<GasDetectorType>.system())
-        .add_system(update_sprites::<AntennaType>.system())
-        .add_system(update_sprites::<GroundPropulsionType>.system())
-        .add_system(update_sprites::<CameraType>.system())
-        .add_system(update_sprites::<ComputeUnitType>.system())
-        .add_system_set(
-            SystemSet::on_enter(GameState::Next)
-                .with_system(draw_atlas.system())
-                .with_system(draw_sprite.system()),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Next).with_system(animate_sprite_system.system()),
-        )
-        .run();
+    app.add_system_set(
+        SystemSet::on_enter(GameState::Next)
+            .with_system(draw_atlas.system().chain(draw_sprite.system()))
+            .with_system(setup.system().chain(startup.system()))
+            .with_system(load_assets.system())
+            .with_system(configure_visuals.system())
+            .with_system(setup_assets.system()),
+    )
+    .add_system_set(
+        SystemSet::on_update(GameState::Next)
+            .with_system(animate_sprite_system.system())
+            .with_system(update_ui_scale_factor.system())
+            .with_system(ui_example.system())
+            .with_system(move_robots.system())
+            .with_system(control_camera_zoom.system())
+            .with_system(increase_memory.system())
+            .with_system(zoom_camera.system())
+            .with_system(move_camera.system())
+            .with_system(interaction_state.system())
+            .with_system(move_pointer.system().chain(update_pointer.system()))
+            .with_system(animate::<BodyType>.system())
+            .with_system(animate::<GasDetectorType>.system())
+            .with_system(animate::<AntennaType>.system())
+            .with_system(animate::<GroundPropulsionType>.system())
+            .with_system(animate_step::<CameraType>.system())
+            .with_system(animate_step::<ComputeUnitType>.system())
+            .with_system(update_sprites::<BodyType>.system())
+            .with_system(update_sprites::<GasDetectorType>.system())
+            .with_system(update_sprites::<AntennaType>.system())
+            .with_system(update_sprites::<GroundPropulsionType>.system())
+            .with_system(update_sprites::<CameraType>.system())
+            .with_system(update_sprites::<ComputeUnitType>.system()),
+    )
+    .run();
 }
 
 fn setup_assets(server: Res<AssetServer>) {
     // load our item configs!
-    let handles = server.load_folder("sprites");
+    let handles = server.load_folder("descriptions");
 }
-struct AnimationFrames(usize);
 
 fn draw_atlas(
     asset_server: Res<AssetServer>,
-    robot_assets: Res<RobotAssets>,
+    item_collection: Res<ItemCollection>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    asset_descriptions: Res<Assets<AssetDescription>>,
-    mut sprite_assets: ResMut<SpriteAssets>,
+    items: Res<Assets<Item>>,
+    mut information_collection: ResMut<InformationCollection>,
 ) {
-    for (i, value) in robot_assets.iter_fields().enumerate() {
-        let field_name = robot_assets.name_at(i).unwrap();
-        if let Some(value) = value.downcast_ref::<Handle<AssetDescription>>() {
-            let desc = asset_descriptions.get(value.clone()).unwrap();
+    for (i, value) in item_collection.iter_fields().enumerate() {
+        let field_name = item_collection.name_at(i).unwrap();
+        if let Some(value) = value.downcast_ref::<Handle<Item>>() {
+            let item = items.get(value.clone()).unwrap();
             let sprite_path = format!("sprites/{}.png", field_name);
-            println!("{} -> {:?}", field_name, desc);
-            println!("sprite path: {}", sprite_path);
+            println!("LOADING: {}", field_name);
+            println!("\t - sprite path: {}", sprite_path);
 
             let texture_handle = asset_server.load(sprite_path.as_str());
             let texture_atlas = TextureAtlas::from_grid(
                 texture_handle,
-                Vec2::new(desc.size.0, desc.size.1),
-                desc.frames,
+                Vec2::new(item.sprite.size.0, item.sprite.size.1),
+                item.sprite.frames,
                 1,
             );
             let texture_atlas_handle = texture_atlases.add(texture_atlas);
-            sprite_assets.add(value.clone(), texture_atlas_handle);
+            information_collection.add(value.clone(), Information::new(texture_atlas_handle));
         }
     }
 }
 
-const SPRITE_BASE_SIZE: f32 = 48.0;
-
 fn draw_sprite(
     mut commands: Commands,
-    sprite_assets: Res<SpriteAssets>,
-    robot_assets: Res<RobotAssets>,
-    asset_descriptions: Res<Assets<AssetDescription>>,
+    information_collection: Res<InformationCollection>,
+    item_collection: Res<ItemCollection>,
+    mut items: ResMut<Assets<Item>>,
 ) {
-    let v_s = vec![
-        robot_assets.simple_tracks.clone(),
-        robot_assets.simple_body.clone(),
-        robot_assets.camera_hd.clone(),
-    ];
-
-    
-
-    for handle in v_s {
-        let sprite_handle = sprite_assets.get(&handle).unwrap().clone();
-        let desc = asset_descriptions.get(handle.clone()).unwrap();
-        println!("{:?}", desc);
-        let us = (SPRITE_BASE_SIZE / 2., SPRITE_BASE_SIZE / 2.);
-        let s = (desc.size.0 / 2., desc.size.1 / 2.);
-        let o = (0., 0.);
-        commands
-            .spawn_bundle(SpriteSheetBundle {
-                transform: Transform {
-                    translation: Vec3::new(s.0 + o.0, -s.1 - o.1, 0.),
-                    ..Default::default()
-                },
-                sprite: TextureAtlasSprite::new(0),
-                texture_atlas: sprite_handle,
-                ..Default::default()
-            })
-            .insert(Timer::from_seconds(0.1, true))
-            .insert(AnimationFrames(desc.frames));
-    }
+    items.attach_to(
+        item_collection.simple_body.clone(),
+        AttachmentPointId::MainCamera,
+        item_collection.camera_hd.clone(),
+    );
+    items.attach_to(
+        item_collection.simple_body.clone(),
+        AttachmentPointId::GroundPropulsion,
+        item_collection.simple_tracks.clone(),
+    );
+    items.spawn(
+        &mut commands,
+        &information_collection,
+        item_collection.simple_body.clone(),
+    );
 }
 
 fn animate_sprite_system(
     time: Res<Time>,
-    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &AnimationFrames)>,
+    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &SpriteAsset)>,
 ) {
-    for (mut timer, mut sprite, AnimationFrames(frames)) in query.iter_mut() {
+    for (mut timer, mut sprite, sprite_asset) in query.iter_mut() {
         timer.tick(time.delta());
-        if timer.finished() && *frames > 1 {
-            sprite.index = ((sprite.index as usize + 1) % frames) as u32;
+        if timer.finished() && sprite_asset.frames > 1 {
+            sprite.index = ((sprite.index as usize + 1) % sprite_asset.frames) as u32;
         }
     }
 }
@@ -280,28 +266,28 @@ fn setup(
 fn startup(mut commands: Commands, mut map_query: MapQuery, game_sprites: Res<GameSprites>) {
     let material_handle = game_sprites.tiles.ground.gras.get_material(0);
 
-    let map_entity = commands.spawn().id();
-    let mut map = Map::new(0u16, map_entity);
+    // let map_entity = commands.spawn().id();
+    // let mut map = Map::new(0u16, map_entity);
 
-    let (mut layer_builder, _) = LayerBuilder::new(
-        &mut commands,
-        LayerSettings::new(
-            UVec2::new(2, 2),
-            UVec2::new(8, 8),
-            Vec2::new(48.0, 48.0),
-            Vec2::new(48.0, 48.0),
-        ),
-        0u16,
-        0u16,
-    );
-    layer_builder.set_all(TileBundle::default());
-    let layer_entity = map_query.build_layer(&mut commands, layer_builder, material_handle);
-    map.add_layer(&mut commands, 0u16, layer_entity);
-    commands
-        .entity(map_entity)
-        .insert(map)
-        .insert(Transform::from_xyz(-128.0, -128.0, 0.0))
-        .insert(GlobalTransform::default());
+    // let (mut layer_builder, _) = LayerBuilder::new(
+    //     &mut commands,
+    //     LayerSettings::new(
+    //         UVec2::new(2, 2),
+    //         UVec2::new(8, 8),
+    //         Vec2::new(48.0, 48.0),
+    //         Vec2::new(48.0, 48.0),
+    //     ),
+    //     0u16,
+    //     0u16,
+    // );
+    // layer_builder.set_all(TileBundle::default());
+    // let layer_entity = map_query.build_layer(&mut commands, layer_builder, material_handle);
+    // map.add_layer(&mut commands, 0u16, layer_entity);
+    // commands
+    //     .entity(map_entity)
+    //     .insert(map)
+    //     .insert(Transform::from_xyz(-128.0, -128.0, 0.0))
+    //     .insert(GlobalTransform::default());
 }
 
 fn move_robots(

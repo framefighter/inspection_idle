@@ -1,6 +1,0 @@
-(
-    size: (11., 10.),
-    attachment_type: Camera(1),
-    rotation: 0.0,
-    frames: 1,
-)

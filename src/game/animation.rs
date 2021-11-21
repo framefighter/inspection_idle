@@ -1,3 +1,5 @@
+use super::robot::sprite::SpriteAnimation;
+
 
 
 #[derive(Clone, Copy, Debug)]
@@ -90,3 +92,4 @@ impl ComponentAnimation {
         }
     }
 }
+

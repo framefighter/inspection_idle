@@ -1,0 +1,9 @@
+(
+    size: 2,
+    item_type: Camera,
+    attachment_points: ({}),
+    sprite: (
+        size: (11., 14.),
+        frames: 3,
+    )
+)

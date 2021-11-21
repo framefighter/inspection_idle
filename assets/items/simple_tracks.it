@@ -1,0 +1,9 @@
+(
+    size: 1,
+    item_type: GroundPropulsion,
+    attachment_points: ({}),
+    sprite: (
+        size: (48., 48.),
+        frames: 8,
+    )
+)
