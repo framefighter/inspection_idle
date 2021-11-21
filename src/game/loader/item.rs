@@ -1,6 +1,5 @@
 use super::{information::InformationCollection, sprite_asset::SpriteAsset};
 use bevy::{
-    asset::HandleId,
     prelude::*,
     reflect::{Reflect, TypeUuid},
 };
@@ -235,5 +234,5 @@ impl Inspectable for AttachmentMap {
         changed
     }
 
-    fn setup(app: &mut AppBuilder) {}
+    fn setup(_app: &mut AppBuilder) {}
 }

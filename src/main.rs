@@ -2,7 +2,7 @@ use bevy::input::mouse::MouseMotion;
 
 use crate::game::loader::item::AttachTo;
 use crate::game::loader::item::SpawnItem;
-use bevy::reflect::DynamicStruct;
+
 use bevy::render::camera::{Camera, CameraProjection};
 use bevy::{
     ecs::component::Component, input::mouse::MouseWheel, prelude::*,
@@ -27,10 +27,10 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_asset_loader::{AssetCollection, AssetLoader};
 use dev::inspector::InspectAllPlugin;
 use game::{
-    builders::{Builder, RobotBuilder},
+    builders::{Builder},
     robot::sprite::{GameSprites, GetSprite, LoadSprites},
     types::{
-        AntennaType, BodyType, CameraType, ComputeUnitType, GasDetectorType, GroundPropulsion,
+        AntennaType, BodyType, CameraType, ComputeUnitType, GasDetectorType,
         GroundPropulsionType, RobotComponent, Robots,
     },
 };
@@ -38,9 +38,9 @@ use heron::prelude::*;
 use rand::prelude::*;
 use ui::{sidebar::*, types::UiState};
 
-use crate::game::builders::PoiBuilder;
+
 use crate::game::loader::information::Information;
-use crate::game::types::{BackgroundType, CameraSensor, PointerSprite, RegionType};
+use crate::game::types::{CameraSensor};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum GameState {
@@ -106,7 +106,7 @@ fn main() {
 
 fn setup_assets(server: Res<AssetServer>) {
     // load our item configs!
-    let handles = server.load_folder("descriptions");
+    let _handles = server.load_folder("descriptions");
 }
 
 fn draw_atlas(
@@ -174,7 +174,7 @@ fn animate_sprite_system(
 
 fn setup(
     mut commands: Commands,
-    mut robots: ResMut<Robots>,
+    _robots: ResMut<Robots>,
     mut game_sprites: ResMut<GameSprites>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -263,8 +263,8 @@ fn setup(
     //     .spawn(&mut commands, &game_sprites);
 }
 
-fn startup(mut commands: Commands, mut map_query: MapQuery, game_sprites: Res<GameSprites>) {
-    let material_handle = game_sprites.tiles.ground.gras.get_material(0);
+fn startup(_commands: Commands, _map_query: MapQuery, game_sprites: Res<GameSprites>) {
+    let _material_handle = game_sprites.tiles.ground.gras.get_material(0);
 
     // let map_entity = commands.spawn().id();
     // let mut map = Map::new(0u16, map_entity);

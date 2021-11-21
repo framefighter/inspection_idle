@@ -1,5 +1,5 @@
-use crate::game::{loader::item::Item, types::RobotComponent};
-use bevy::{asset::Asset, prelude::*, reflect::TypeUuid, utils::HashMap};
+use crate::game::{types::RobotComponent};
+use bevy::{prelude::*};
 use bevy_asset_loader::AssetCollection;
 use bevy_inspector_egui::Inspectable;
 use bevy_interact_2d::{Group, Interactable};

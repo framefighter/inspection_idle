@@ -1,9 +1,9 @@
-use crate::game::{loader::item::Item, types::RobotComponent};
-use bevy::{asset::Asset, prelude::*, reflect::TypeUuid, utils::HashMap};
-use bevy_asset_loader::AssetCollection;
+
+use bevy::{prelude::*, reflect::TypeUuid};
+
 use bevy_inspector_egui::Inspectable;
-use bevy_interact_2d::{Group, Interactable};
-use heron::{CollisionShape, RigidBody};
+
+
 use std::fmt::Debug;
 
 #[derive(serde::Deserialize, TypeUuid, Inspectable, Debug, Reflect, Clone, Copy)]
