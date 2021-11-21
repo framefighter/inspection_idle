@@ -6,16 +6,30 @@ use bevy_interact_2d::{Group, Interactable};
 use heron::{CollisionShape, RigidBody};
 use std::fmt::Debug;
 
-pub enum AssetHierarchy {
-    Parent(Handle<AssetDescription>, Vec<AssetHierarchy>),
-    Child(Handle<AssetDescription>),
+#[derive(serde::Deserialize, Inspectable, Debug, Reflect, Clone, Copy)]
+pub enum AttachmentType {
+    Camera(usize),
+    Body,
+    Frame,
+}
+
+#[derive(serde::Deserialize, Inspectable, Debug, Reflect, Clone, Copy)]
+pub struct AttachmentInfo {
+    position: (f32, f32),
+    attachment_type: AttachmentType,
+}
+
+#[derive(serde::Deserialize,TypeUuid, Debug, Reflect, Clone)]
+#[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f9"]
+pub struct RobotConfig {
+    attachment_infos: HashMap<usize, AttachmentInfo>,
 }
 
 #[derive(serde::Deserialize, TypeUuid, Inspectable, Debug, Reflect, Clone, Copy)]
 #[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f8"]
 pub struct AssetDescription {
     pub size: (f32, f32),
-    pub translation: (f32, f32),
+    pub attachment_type: AttachmentType,
     pub rotation: f32,
     pub frames: usize,
 }

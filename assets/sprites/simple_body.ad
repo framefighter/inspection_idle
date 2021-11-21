@@ -1,6 +1,6 @@
 (
     size: (36., 32.),
-    translation: (6., 8.),
+    attachment_type: Body,
     rotation: 0.0,
     frames: 2,
 )

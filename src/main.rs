@@ -12,7 +12,7 @@ use bevy_egui::{EguiContext, EguiPlugin};
 use bevy_interact_2d::{Group, InteractionDebugPlugin, InteractionSource, InteractionState};
 
 use game::animation::AnimationDirection;
-use game::robot::sprite::{AssetDescription, RobotAssets, SpriteAssets};
+use game::robot::sprite::{AssetDescription, RobotAssets, RobotConfig, SpriteAssets};
 use game::types::PointerType;
 use std::fmt::Debug;
 
@@ -37,7 +37,6 @@ use rand::prelude::*;
 use ui::{sidebar::*, types::UiState};
 
 use crate::game::builders::PoiBuilder;
-use crate::game::robot::sprite::AssetHierarchy;
 use crate::game::types::{BackgroundType, CameraSensor, PointerSprite, RegionType};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
@@ -62,7 +61,8 @@ fn main() {
         .add_plugin(TilemapPlugin)
         .add_plugin(InteractionDebugPlugin)
         .add_plugin(PhysicsPlugin::default())
-        .add_plugin(RonAssetPlugin::<AssetDescription>::new(&["ad"]));
+        .add_plugin(RonAssetPlugin::<AssetDescription>::new(&["ad"]))
+        .add_plugin(RonAssetPlugin::<RobotConfig>::new(&["rc"]));
     AssetLoader::new(GameState::AssetLoading, GameState::Next)
         .with_collection::<RobotAssets>()
         .build(&mut app);
@@ -91,11 +91,13 @@ fn main() {
         .add_system(update_sprites::<GroundPropulsionType>.system())
         .add_system(update_sprites::<CameraType>.system())
         .add_system(update_sprites::<ComputeUnitType>.system())
-        .add_system_set(SystemSet::on_enter(GameState::Next).with_system(draw_atlas.system()))
         .add_system_set(
-            SystemSet::on_update(GameState::Next)
-                .with_system(animate_sprite_system.system())
+            SystemSet::on_enter(GameState::Next)
+                .with_system(draw_atlas.system())
                 .with_system(draw_sprite.system()),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Next).with_system(animate_sprite_system.system()),
         )
         .run();
 }
@@ -148,16 +150,19 @@ fn draw_sprite(
         robot_assets.camera_hd.clone(),
     ];
 
+    
+
     for handle in v_s {
         let sprite_handle = sprite_assets.get(&handle).unwrap().clone();
         let desc = asset_descriptions.get(handle.clone()).unwrap();
+        println!("{:?}", desc);
         let us = (SPRITE_BASE_SIZE / 2., SPRITE_BASE_SIZE / 2.);
         let s = (desc.size.0 / 2., desc.size.1 / 2.);
-        let o = desc.translation;
+        let o = (0., 0.);
         commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform {
-                    translation: Vec3::new(-us.0 + s.0 + o.0, us.1 + s.1 + o.0, 0.),
+                    translation: Vec3::new(s.0 + o.0, -s.1 - o.1, 0.),
                     ..Default::default()
                 },
                 sprite: TextureAtlasSprite::new(0),

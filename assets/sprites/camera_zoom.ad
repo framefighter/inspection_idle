@@ -1,6 +1,6 @@
 (
     size: (11., 14.),
-    translation: (26., 0.),
+    attachment_type: Camera(2),
     rotation: 0.0,
     frames: 3,
 )

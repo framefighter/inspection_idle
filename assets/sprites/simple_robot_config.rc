@@ -1,0 +1,20 @@
+(
+    attachment_infos: {
+        3: (
+            position: (15., 4.),
+            attachment_type: Camera(1),
+        ),
+        2: (
+            position: (26., 0.),
+            attachment_type: Camera(2),
+        ),
+        1: (
+            position: (15., 4.),
+            attachment_type: Body,
+        ),
+        0: (
+            position: (0., 0.),
+            attachment_type: Frame,
+        ),
+    }
+)
