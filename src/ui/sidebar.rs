@@ -4,8 +4,6 @@ use bevy_egui::{
     EguiContext, EguiSettings,
 };
 
-use crate::game::types::*;
-
 pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
 
@@ -49,62 +47,4 @@ pub fn update_ui_scale_factor(
             egui_settings.scale_factor = scale_factor;
         }
     }
-}
-
-pub fn ui_example(
-    query: Query<(Entity, &InfoText, &Children)>,
-    mut commands: Commands,
-    egui_ctx: ResMut<EguiContext>,
-    mut robots: ResMut<Robots>,
-) {
-    egui::Window::new("side_panel")
-        .default_width(200.0)
-        .show(egui_ctx.ctx(), |ui| {
-            ui.heading("Properties");
-            ui.separator();
-
-            ui.group(|ui| {
-                ui.label("Robots");
-                ui.separator();
-                query.for_each(|(e, info_text, children)| {
-                    let selected = robots.selected_robot == Some(e);
-                    if ui
-                        .add(
-                            egui::Button::new(&info_text.name)
-                                .fill(if selected {
-                                    Color32::YELLOW
-                                } else {
-                                    Color32::BLACK
-                                })
-                                .text_color(if selected {
-                                    Color32::BLACK
-                                } else {
-                                    Color32::WHITE
-                                }),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(&info_text.description);
-                            ui.label(format!(
-                                "(click to {})",
-                                if selected { "unselect" } else { "select" }
-                            ));
-                        })
-                        .clicked()
-                    {
-                        if selected {
-                            robots.selected_robot = None;
-                        } else {
-                            robots.selected_robot = Some(e);
-                        }
-                    }
-
-                    for child in children.iter() {
-                        let _p = commands.entity(*child);
-                        
-                    }
-
-                    // ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
-                });
-            });
-        });
 }

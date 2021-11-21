@@ -101,10 +101,7 @@ impl SpawnItem for Assets<Item> {
         item_handle: Handle<Item>,
     ) -> Entity {
         commands
-            .spawn_bundle((
-                Transform::default(),
-                GlobalTransform::default(),
-            ))
+            .spawn_bundle((Transform::from_xyz(0., 0., 5.), GlobalTransform::default()))
             .insert(RigidBody::Dynamic)
             .insert(CollisionShape::Cuboid {
                 half_extends: Vec3::splat(48.) / 2.,

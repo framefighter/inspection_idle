@@ -4,7 +4,10 @@ use bevy_inspector_egui::{
 };
 use std::fmt::Debug;
 
-use crate::{game::{loader::{item::Item, sprite_asset::SpriteAsset}, robot::sprite::SpriteAnimation, types::*}, ui::types::UiState};
+use crate::{
+    game::loader::{item::Item, sprite_asset::SpriteAsset},
+    ui::types::UiState,
+};
 
 pub struct InspectAllPlugin;
 
@@ -15,28 +18,8 @@ impl Plugin for InspectAllPlugin {
         let mut registry = app
             .world_mut()
             .get_resource_or_insert_with(InspectableRegistry::default);
-        registry.register::<InfoText>();
-        registry.register::<Agility>();
-        registry.register::<Battery>();
-        registry.register::<Quality>();
-        registry.register::<Cargo>();
-        registry.register::<AutonomyLevel>();
-        registry.register::<SpriteAnimation>();
-
-        registry.register::<BodyType>();
-        registry.register::<GroundPropulsionType>();
-        registry.register::<ComputeUnitType>();
-        registry.register::<CameraType>();
-        registry.register::<AntennaType>();
-
         registry.register::<Item>();
         registry.register::<SpriteAsset>();
-
-        // registry.register::<OnBoardComputeUnit>();
-        // registry.register::<AdditionalComputeUnits>();
-        // registry.register::<Antennas>();
-        // registry.register::<Cameras>();
-        // registry.register::<GasDetectors>();
     }
 }
 
