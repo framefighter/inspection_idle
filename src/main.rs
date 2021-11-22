@@ -1,13 +1,9 @@
 use bevy::input::mouse::MouseMotion;
-
-use crate::game::loader::item::AttachTo;
-use crate::game::loader::item::SpawnItem;
+use game::item_builder::ItemBuilder;
+use game::loader::item::SelectedAttachmentPoint;
 
 use bevy::render::camera::{Camera, CameraProjection};
-use bevy::{
-    input::mouse::MouseWheel, prelude::*,
-    render::camera::OrthographicProjection,
-};
+use bevy::{input::mouse::MouseWheel, prelude::*, render::camera::OrthographicProjection};
 use bevy_asset_ron::RonAssetPlugin;
 use bevy_ecs_tilemap::TilemapPlugin;
 use bevy_egui::{EguiContext, EguiPlugin};
@@ -22,10 +18,9 @@ mod ui;
 
 use bevy_ecs_tilemap::prelude::*;
 
-use bevy_asset_loader::{AssetCollection, AssetLoader};
+use bevy_asset_loader::AssetLoader;
 use dev::inspector::InspectAllPlugin;
 use heron::prelude::*;
-use rand::prelude::*;
 use ui::{sidebar::*, types::UiState};
 
 use crate::game::loader::information::Information;
@@ -68,7 +63,8 @@ fn main() {
             .with_system(update_ui_scale_factor.system())
             .with_system(move_camera.system())
             .with_system(zoom_camera.system())
-            .with_system(interaction_state.system()),
+            .with_system(interaction_state.system())
+            .with_system(robot_config_ui.system()),
     )
     .run();
 }
@@ -82,13 +78,13 @@ fn draw_atlas(
     asset_server: Res<AssetServer>,
     item_collection: Res<ItemCollection>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    items: Res<Assets<Item>>,
+    mut items: ResMut<Assets<Item>>,
     mut information_collection: ResMut<InformationCollection>,
 ) {
     for (i, value) in item_collection.iter_fields().enumerate() {
         let field_name = item_collection.name_at(i).unwrap();
         if let Some(value) = value.downcast_ref::<Handle<Item>>() {
-            let item = items.get(value.clone()).unwrap();
+            let item = items.get_mut(value.clone()).unwrap();
             let sprite_path = format!("sprites/{}.png", field_name);
             println!("LOADING: {}", field_name);
             println!("\t - sprite path: {}", sprite_path);
@@ -110,33 +106,24 @@ fn draw_sprite(
     mut commands: Commands,
     information_collection: Res<InformationCollection>,
     item_collection: Res<ItemCollection>,
-    mut items: ResMut<Assets<Item>>,
+    items: Res<Assets<Item>>,
 ) {
-    items.attach_to(
-        item_collection.simple_body.clone(),
-        AttachmentPointId::MainCamera,
-        item_collection.camera_hd.clone(),
-    );
-    items.attach_to(
-        item_collection.simple_body.clone(),
-        AttachmentPointId::GroundPropulsion,
-        item_collection.simple_tracks.clone(),
-    );
-    items.spawn(
-        &mut commands,
-        &information_collection,
-        item_collection.simple_body.clone(),
-    );
+    ItemBuilder::instantiate(&item_collection.simple_body, items)
+        .attach(
+            &item_collection.simple_tracks,
+            AttachmentPointId::GroundPropulsion,
+        )
+        .spawn(&mut commands, &information_collection);
 }
 
 fn animate_sprite_system(
     time: Res<Time>,
-    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &SpriteAsset)>,
+    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Item)>,
 ) {
-    for (mut timer, mut sprite, sprite_asset) in query.iter_mut() {
+    for (mut timer, mut sprite, item) in query.iter_mut() {
         timer.tick(time.delta());
-        if timer.finished() && sprite_asset.frames > 1 {
-            sprite.index = ((sprite.index as usize + 1) % sprite_asset.frames) as u32;
+        if timer.finished() && item.sprite.frames > 1 {
+            sprite.index = ((sprite.index as usize + 1) % item.sprite.frames) as u32;
         }
     }
 }
@@ -245,6 +232,9 @@ const MAX_ZOOM: f32 = 3.0;
 fn interaction_state(
     mouse_button_input: Res<Input<MouseButton>>,
     interaction_state: Res<InteractionState>,
+    empty_attachment_query: Query<&SelectedAttachmentPoint>,
+    items: Res<Assets<Item>>,
+    mut ui_state: ResMut<UiState>,
 ) {
     if !mouse_button_input.just_released(MouseButton::Left) {
         return;
@@ -252,5 +242,17 @@ fn interaction_state(
 
     for (_entity, _coords) in interaction_state.get_group(Group(0)).iter() {
         // robots.selected_robot = Some(*entity);
+    }
+
+    for (entity, coords) in interaction_state.get_group(Group(1)).iter() {
+        // robots.selected_robot = Some(*entity);
+        println!("Pressed {:?} at {:?}", entity, coords);
+        let attachment_point = empty_attachment_query.get(entity.clone()).unwrap();
+        println!("Attachment point: {:?}", attachment_point);
+        let item = items
+            .get(attachment_point.parent_item_handle.clone())
+            .unwrap();
+        println!("Item: {:?}", item);
+        ui_state.selected_attachment_point = Some(attachment_point.clone());
     }
 }

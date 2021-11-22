@@ -1,8 +1,12 @@
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, FontDefinitions, FontFamily},
+    egui::{self, Color32, FontDefinitions, FontFamily, Ui},
     EguiContext, EguiSettings,
 };
+
+use crate::game::loader::item::{Item, ItemType, SelectedAttachmentPoint};
+
+use super::types::UiState;
 
 pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
@@ -47,4 +51,68 @@ pub fn update_ui_scale_factor(
             egui_settings.scale_factor = scale_factor;
         }
     }
+}
+
+pub fn robot_config_ui(
+    query: Query<&Item>,
+    items: Res<Assets<Item>>,
+    ui_state: Res<UiState>,
+    mut commands: Commands,
+    egui_ctx: ResMut<EguiContext>,
+) {
+    egui::Window::new("Menu")
+        .default_width(200.0)
+        .show(egui_ctx.ctx(), |ui| {
+            ui.heading("Configuration");
+            ui.separator();
+
+            for item in query.iter() {
+                if item.item_type != ItemType::Body {
+                    continue;
+                }
+                build_item_tree(ui, item, &items, &ui_state);
+            }
+            // ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
+        });
+}
+
+fn build_item_tree(ui: &mut Ui, parent_item: &Item, items: &Assets<Item>, ui_state: &UiState) {
+    let mut selected = false;
+    if let Some(selected_item) = ui_state.selected_attachment_point.clone() {
+        // if Some(selected_item.parent_item_handle.id) == parent_item {
+        //     selected = true;
+        // }
+    }
+    ui.colored_label(
+        if selected {
+            Color32::GREEN
+        } else {
+            Color32::WHITE
+        },
+        format!("Item: {:?}", parent_item.item_type),
+    );
+    ui.indent(parent_item.item_type, |ui| {
+        let len = parent_item.attachment_points.0.len();
+        for (i, (key, value)) in parent_item.attachment_points.0.iter().enumerate() {
+            let mut color = Color32::WHITE;
+            if let Some(selected_item) = ui_state.selected_attachment_point.clone() {
+                if *key == selected_item.attachment_point_id && selected {
+                    color = Color32::GREEN;
+                }
+            }
+            ui.colored_label(color, format!("Point: {:?}", key));
+            if let Some(u_item_handle) = value.attached_item.clone() {
+                if let Some(item) = items.get(&u_item_handle) {
+                    build_item_tree(ui, item, items, ui_state);
+                } else {
+                    ui.colored_label(Color32::RED, "Could not find item.");
+                }
+            } else {
+                ui.colored_label(Color32::GRAY, "No item attached.");
+            }
+            if i != len - 1 {
+                ui.separator();
+            }
+        }
+    });
 }
