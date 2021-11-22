@@ -4,7 +4,7 @@ use bevy_egui::{
     EguiContext, EguiSettings,
 };
 
-use crate::game::loader::item::{Item, ItemType, SelectedAttachmentPoint};
+use crate::game::loader::item::*;
 
 use super::types::UiState;
 
@@ -54,7 +54,7 @@ pub fn update_ui_scale_factor(
 }
 
 pub fn robot_config_ui(
-    query: Query<&Item>,
+    mut query_e: Query<&mut EmptyAttachmentPoint>,
     items: Res<Assets<Item>>,
     ui_state: Res<UiState>,
     mut commands: Commands,
@@ -65,54 +65,23 @@ pub fn robot_config_ui(
         .show(egui_ctx.ctx(), |ui| {
             ui.heading("Configuration");
             ui.separator();
-
-            for item in query.iter() {
-                if item.item_type != ItemType::Body {
-                    continue;
+            if ui.button("Show Empty").clicked() {
+                for mut item in &mut query_e.iter_mut() {
+                    println!("{:?}", item);
+                    item.toggle();
                 }
-                build_item_tree(ui, item, &items, &ui_state);
+            }
+            if let Some(attachment_menu) = &ui_state.show_attachment_menu {
+                if let Some(e) = attachment_menu.item_to_attach_to.entity {
+                    for (id, item) in items.iter() {
+                        for (p_id, ap) in item.attachment_points.0.iter() {
+                            if attachment_menu.item_to_attach_to.attachment_point_id == *p_id {
+                                ui.label(format!("{:#?}", item.item_type));
+                            }
+                        }
+                    }
+                }
             }
             // ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
         });
-}
-
-fn build_item_tree(ui: &mut Ui, parent_item: &Item, items: &Assets<Item>, ui_state: &UiState) {
-    let mut selected = false;
-    if let Some(selected_item) = ui_state.selected_attachment_point.clone() {
-        // if Some(selected_item.parent_item_handle.id) == parent_item {
-        //     selected = true;
-        // }
-    }
-    ui.colored_label(
-        if selected {
-            Color32::GREEN
-        } else {
-            Color32::WHITE
-        },
-        format!("Item: {:?}", parent_item.item_type),
-    );
-    ui.indent(parent_item.item_type, |ui| {
-        let len = parent_item.attachment_points.0.len();
-        for (i, (key, value)) in parent_item.attachment_points.0.iter().enumerate() {
-            let mut color = Color32::WHITE;
-            if let Some(selected_item) = ui_state.selected_attachment_point.clone() {
-                if *key == selected_item.attachment_point_id && selected {
-                    color = Color32::GREEN;
-                }
-            }
-            ui.colored_label(color, format!("Point: {:?}", key));
-            if let Some(u_item_handle) = value.attached_item.clone() {
-                if let Some(item) = items.get(&u_item_handle) {
-                    build_item_tree(ui, item, items, ui_state);
-                } else {
-                    ui.colored_label(Color32::RED, "Could not find item.");
-                }
-            } else {
-                ui.colored_label(Color32::GRAY, "No item attached.");
-            }
-            if i != len - 1 {
-                ui.separator();
-            }
-        }
-    });
 }

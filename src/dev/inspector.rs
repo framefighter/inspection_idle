@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::*;
 
 use crate::{
-    game::loader::{item::Item, sprite_asset::SpriteAsset},
+    game::loader::{item::*, sprite_asset::SpriteAsset},
     ui::types::UiState,
 };
 
@@ -15,7 +15,14 @@ impl Plugin for InspectAllPlugin {
         let mut registry = app
             .world_mut()
             .get_resource_or_insert_with(InspectableRegistry::default);
-        registry.register::<Item>();
         registry.register::<SpriteAsset>();
+        registry.register::<AttachmentPoint>();
+        registry.register::<AttachmentPointId>();
+        registry.register::<ItemType>();
+        registry.register::<ItemSize>();
+        registry.register::<Attachments>();
+        registry.register::<Attachment>();
+        registry.register::<WantToAttach>();
+        registry.register::<EmptyAttachmentPoint>();
     }
 }

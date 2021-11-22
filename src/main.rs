@@ -1,13 +1,16 @@
 use bevy::input::mouse::MouseMotion;
-use game::item_builder::ItemBuilder;
-use game::loader::item::SelectedAttachmentPoint;
+use game::item_builder::ItemSpawner;
+use game::loader::item::*;
 
 use bevy::render::camera::{Camera, CameraProjection};
 use bevy::{input::mouse::MouseWheel, prelude::*, render::camera::OrthographicProjection};
 use bevy_asset_ron::RonAssetPlugin;
 use bevy_ecs_tilemap::TilemapPlugin;
 use bevy_egui::{EguiContext, EguiPlugin};
-use bevy_interact_2d::{Group, InteractionDebugPlugin, InteractionSource, InteractionState};
+use bevy_interact_2d::{
+    Group, Interactable, InteractionDebugPlugin, InteractionPlugin, InteractionSource,
+    InteractionState,
+};
 use game::loader::information::InformationCollection;
 use game::loader::item::{AttachmentPointId, Item, ItemCollection};
 use game::loader::sprite_asset::SpriteAsset;
@@ -24,6 +27,7 @@ use heron::prelude::*;
 use ui::{sidebar::*, types::UiState};
 
 use crate::game::loader::information::Information;
+use crate::ui::types::{AttachmentItem, AttachmentMenu};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum GameState {
@@ -43,7 +47,7 @@ fn main() {
         .add_plugin(EguiPlugin)
         .add_plugin(InspectAllPlugin)
         .add_plugin(TilemapPlugin)
-        .add_plugin(InteractionDebugPlugin)
+        .add_plugin(InteractionPlugin)
         .add_plugin(PhysicsPlugin::default())
         .add_plugin(RonAssetPlugin::<Item>::new(&["it"]));
     AssetLoader::new(GameState::AssetLoading, GameState::Next)
@@ -64,7 +68,9 @@ fn main() {
             .with_system(move_camera.system())
             .with_system(zoom_camera.system())
             .with_system(interaction_state.system())
-            .with_system(robot_config_ui.system()),
+            .with_system(robot_config_ui.system())
+            .with_system(attach_items.system())
+            .with_system(show_empty_attachment_points.system()),
     )
     .run();
 }
@@ -108,22 +114,88 @@ fn draw_sprite(
     item_collection: Res<ItemCollection>,
     items: Res<Assets<Item>>,
 ) {
-    ItemBuilder::instantiate(&item_collection.simple_body, items)
-        .attach(
-            &item_collection.simple_tracks,
-            AttachmentPointId::GroundPropulsion,
-        )
-        .spawn(&mut commands, &information_collection);
+    let spawner = ItemSpawner::new(&items, &information_collection, &item_collection);
+
+    let parent = spawner.spawn(&mut commands, &item_collection.simple_body);
+    spawner.spawn_attached(
+        &mut commands,
+        parent,
+        &item_collection.simple_tracks,
+        AttachmentPointId::GroundPropulsion,
+    );
+    spawner.spawn_attached(
+        &mut commands,
+        parent,
+        &item_collection.camera_zoom,
+        AttachmentPointId::MainCamera,
+    );
+    spawner.spawn_attached(
+        &mut commands,
+        parent,
+        &item_collection.camera_hd,
+        AttachmentPointId::LineFollowerCamera,
+    );
+}
+
+fn attach_items(
+    mut commands: Commands,
+    query: Query<(
+        Entity,
+        &Parent,
+        &WantToAttach,
+        &mut Transform,
+        &ItemSize,
+        &ItemType,
+    )>,
+    mut query_p: Query<(&mut Attachments,)>,
+) {
+    query.for_each_mut(|(e, p, want_attach, mut transform, item_size, item_type)| {
+        println!(
+            "CHILD WANT TO ATTACH TO {:?} with {:?} and {:?}",
+            want_attach, item_size, item_type
+        );
+        if let Ok((mut attachments,)) = query_p.get_mut(p.0) {
+            if attachments.0.get_mut(&want_attach.0).unwrap().try_attach(
+                e,
+                item_size,
+                item_type,
+                &mut transform,
+            ) {
+                commands.entity(e).remove::<WantToAttach>();
+            }
+        }
+    });
+}
+
+fn show_empty_attachment_points(
+    mut eap_q: Query<
+        (&EmptyAttachmentPoint, &Children, &mut Interactable),
+        Changed<EmptyAttachmentPoint>,
+    >,
+    mut chi_q: Query<&mut Visible>,
+) {
+    for (eap, children, mut interactable) in eap_q.iter_mut() {
+        for child in children.iter() {
+            if let Ok(mut vis) = chi_q.get_mut(*child) {
+                vis.is_visible = eap.show;
+                if !eap.show {
+                    interactable.groups = vec![];
+                } else {
+                    interactable.groups = vec![Group(1)];
+                }
+            }
+        }
+    }
 }
 
 fn animate_sprite_system(
     time: Res<Time>,
-    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Item)>,
+    mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &SpriteAsset)>,
 ) {
-    for (mut timer, mut sprite, item) in query.iter_mut() {
+    for (mut timer, mut texture, sprite) in query.iter_mut() {
         timer.tick(time.delta());
-        if timer.finished() && item.sprite.frames > 1 {
-            sprite.index = ((sprite.index as usize + 1) % item.sprite.frames) as u32;
+        if timer.finished() && sprite.frames > 1 {
+            texture.index = ((texture.index as usize + 1) % sprite.frames) as u32;
         }
     }
 }
@@ -232,7 +304,8 @@ const MAX_ZOOM: f32 = 3.0;
 fn interaction_state(
     mouse_button_input: Res<Input<MouseButton>>,
     interaction_state: Res<InteractionState>,
-    empty_attachment_query: Query<&SelectedAttachmentPoint>,
+    query: Query<(&Parent, &Interactable, &AttachmentPointId)>,
+    query2: Query<(&ItemSize, &ItemType)>,
     items: Res<Assets<Item>>,
     mut ui_state: ResMut<UiState>,
 ) {
@@ -247,12 +320,17 @@ fn interaction_state(
     for (entity, coords) in interaction_state.get_group(Group(1)).iter() {
         // robots.selected_robot = Some(*entity);
         println!("Pressed {:?} at {:?}", entity, coords);
-        let attachment_point = empty_attachment_query.get(entity.clone()).unwrap();
-        println!("Attachment point: {:?}", attachment_point);
-        let item = items
-            .get(attachment_point.parent_item_handle.clone())
-            .unwrap();
-        println!("Item: {:?}", item);
-        ui_state.selected_attachment_point = Some(attachment_point.clone());
+        let (parent, interactable, id) = query.get(entity.clone()).unwrap();
+        let parent_item = query2.get(parent.0).unwrap();
+        println!(
+            "Attachment point {:?} with requirements {:?}",
+            id, parent_item
+        );
+        ui_state.show_attachment_menu = Some(AttachmentMenu {
+            item_to_attach_to: AttachmentItem {
+                entity: Some(parent.0),
+                attachment_point_id: *id,
+            },
+        });
     }
 }

@@ -8,7 +8,7 @@
             item_types: [
                 Camera,
             ],
-            max_item_size: 1,
+            max_item_size: 2,
         ),
         LineFollowerCamera: (
             position: (10., 17., 2.),
