@@ -209,7 +209,7 @@ fn draw_sprite(
         // .attach(&item_collection.camera_zoom, AttachmentPointId::MainCamera)
         .build(
             &mut commands,
-            Transform::from_translation(Vec3::new(5.0, 0.0, 0.0)),
+            Transform::default(),
         );
 }
 
