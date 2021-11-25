@@ -1,10 +1,14 @@
+use crate::game::loader::collection::ItemCollection;
 use bevy::prelude::*;
 use bevy_egui::{
     egui::{self, Color32, FontDefinitions, FontFamily, Ui},
     EguiContext, EguiSettings,
 };
 
-use crate::game::loader::item::*;
+use crate::game::{
+    item_builder::ItemSpawner,
+    loader::{information::InformationCollection, item::*},
+};
 
 use super::types::UiState;
 
@@ -54,34 +58,110 @@ pub fn update_ui_scale_factor(
 }
 
 pub fn robot_config_ui(
-    mut query_e: Query<&mut EmptyAttachmentPoint>,
+    mut query_p: Query<&mut Attachments>,
     items: Res<Assets<Item>>,
-    ui_state: Res<UiState>,
+    mut ui_state: ResMut<UiState>,
     mut commands: Commands,
     egui_ctx: ResMut<EguiContext>,
+    information_collection: Res<InformationCollection>,
+    item_collection: Res<ItemCollection>,
 ) {
     egui::Window::new("Menu")
         .default_width(200.0)
         .show(egui_ctx.ctx(), |ui| {
-            ui.heading("Configuration");
+            ui.heading("Attachments");
             ui.separator();
-            if ui.button("Show Empty").clicked() {
-                for mut item in &mut query_e.iter_mut() {
-                    println!("{:?}", item);
-                    item.toggle();
-                }
+            if ui
+                .button(format!(
+                    "{} Empty",
+                    if !ui_state.show_attachment_points {
+                        "Show"
+                    } else {
+                        "Hide"
+                    }
+                ))
+                .clicked()
+            {
+                ui_state.show_attachment_points = !ui_state.show_attachment_points;
             }
-            if let Some(attachment_menu) = &ui_state.show_attachment_menu {
-                if let Some(e) = attachment_menu.item_to_attach_to.entity {
-                    for (id, item) in items.iter() {
-                        for (p_id, ap) in item.attachment_points.0.iter() {
-                            if attachment_menu.item_to_attach_to.attachment_point_id == *p_id {
-                                ui.label(format!("{:#?}", item.item_type));
+            if ui_state.show_attachment_points {
+                if let Some(attachment_menu) = &ui_state.show_attachment_menu {
+                    let mut spawner =
+                        ItemSpawner::new(&items, &information_collection, &item_collection);
+                    ui.separator();
+                    if let Some(e) = attachment_menu.item_to_attach_to.entity {
+                        if let Ok(ref mut attachments) = query_p.get_mut(e) {
+                            if let Some(ad) = attachments
+                                .0
+                                .get_mut(&attachment_menu.item_to_attach_to.attachment_point_id)
+                            {
+                                ui.colored_label(
+                                    Color32::WHITE,
+                                    format!(
+                                        "{}",
+                                        if ad.is_attached() {
+                                            "REPLACE"
+                                        } else {
+                                            "ADD NEW"
+                                        }
+                                    ),
+                                );
+                                ui.colored_label(Color32::WHITE, format!("{}", ad.id));
+                                ui.colored_label(
+                                    Color32::GRAY,
+                                    format!(
+                                        "Accepted Types:\n{}",
+                                        ad.accepted_types
+                                            .iter()
+                                            .map(|t| t.to_string())
+                                            .collect::<Vec<_>>()
+                                            .join(",\n\t")
+                                    ),
+                                );
+                                if let Some(attached_entity) = ad.attached {
+                                    if ui
+                                        .add(
+                                            egui::Button::new("❌ Remove")
+                                                .fill(Color32::RED)
+                                                .text_color(Color32::WHITE),
+                                        )
+                                        .clicked()
+                                    {
+                                        ad.attached = None;
+                                        ui_state.show_attachment_menu =
+                                            ui_state.show_attachment_menu.clone();
+                                        commands.entity(attached_entity).despawn_recursive();
+                                    }
+                                }
+                                ui.indent("h", |ui| {
+                                    for (id, item) in items.iter() {
+                                        if ad.is_compatible(&ItemSize(item.size), &item.item_type) {
+                                            let handle = &Handle::weak(id);
+                                            let information =
+                                                information_collection.get(&handle).unwrap();
+                                            if ui.button(format!("{}", information.name)).clicked()
+                                            {
+                                                ui_state.show_attachment_menu =
+                                                        ui_state.show_attachment_menu.clone();
+                                                if let Some(attached_entity) = ad.attached {
+                                                    ad.attached = None;
+                                                    commands
+                                                        .entity(attached_entity)
+                                                        .despawn_recursive();
+                                                }
+                                                spawner
+                                                    .item(&handle)
+                                                    .with_parent(e, ad.id)
+                                                    .interaction_markers()
+                                                    .build(&mut commands, ad.transform);
+                                            }
+                                        }
+                                    }
+                                });
                             }
                         }
                     }
                 }
             }
-            // ui.add(Label::new(&info_text.description).text_color(Color32::GRAY));
         });
 }

@@ -1,7 +1,4 @@
 (
-    size: 1,
-    item_type: None,
-    attachment_points: ({}),
     sprite: (
         size: (20., 20.),
         frames: 1,

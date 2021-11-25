@@ -5,7 +5,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version= "0.5.0", features = ["serialize"] }
+bevy = { version = "0.5.0", features = ["serialize"] }
 bevy_egui = "0.7.1"
 bevy-inspector-egui = "0.6.1"
 bevy_prototype_lyon = "0.3.1"
@@ -13,10 +13,11 @@ bevy_svg = "0.3.1"
 bevy_rapier2d = "0.11.0"
 bevy_ecs_tilemap = "0.4.0"
 bevy_interact_2d = "0.5.3"
-heron = { version = "0.12.1", features = ["2d"] }
 rand = "0.8"
 getrandom = { version = "0.2", features = ["js"] }
 bevy_asset_loader = "0.6.0"
 bevy_asset_ron = "0.2.0"
 serde = "1.0.130"
 nanoid = "0.4.0"
+bevy_prototype_debug_lines = "0.3.3"
+itertools = "0.10.1"

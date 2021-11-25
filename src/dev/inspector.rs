@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::*;
 
-use crate::{
-    game::loader::{item::*, sprite_asset::SpriteAsset},
-    ui::types::UiState,
-};
+use crate::{game::{loader::{item::*, sprite_asset::SpriteAsset}, world::terrain::TerrainCollider}, ui::types::UiState};
 
 pub struct InspectAllPlugin;
 
@@ -23,6 +20,9 @@ impl Plugin for InspectAllPlugin {
         registry.register::<Attachments>();
         registry.register::<Attachment>();
         registry.register::<WantToAttach>();
-        registry.register::<EmptyAttachmentPoint>();
+        registry.register::<AttachmentPointMarker>();
+        registry.register::<ItemName>();
+        registry.register::<Drivable>();
+        registry.register::<TerrainCollider>();
     }
 }

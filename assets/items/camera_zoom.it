@@ -1,12 +1,12 @@
 (
     size: 2,
-    item_type: Camera,
+    item_type: Robot(Camera),
     attachment_points: ({
         MainCamera: (
             position: (-8., -17., 2.),
             rotation: 0.,
             item_types: [
-                Camera,
+                Robot(Camera),
             ],
             max_item_size: 2,
         ),
@@ -14,7 +14,7 @@
             position: (10., 17., 2.),
             rotation: 0.,
             item_types: [
-                Camera,
+                Robot(Camera),
             ],
             max_item_size: 1,
         ),

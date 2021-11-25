@@ -1,0 +1,7 @@
+(
+    item_type: Terrain(Ground),
+    sprite: (
+        size: (48., 48.),
+        frames: 1,
+    )
+)

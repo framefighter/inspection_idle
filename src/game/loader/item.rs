@@ -1,23 +1,27 @@
+use crate::PHYSICS_SCALE;
+
 use super::{
     information::{Information, InformationCollection},
     sprite_asset::SpriteAsset,
 };
-use bevy::{
-    asset::HandleId,
-    prelude::*,
-    reflect::{Reflect, TypeUuid},
-    utils::tracing::field::Empty,
-};
+use bevy::{asset::HandleId, log, prelude::*, reflect::{Reflect, TypeUuid}, utils::tracing::field::Empty};
 use bevy_asset_loader::AssetCollection;
 use bevy_inspector_egui::Inspectable;
 use bevy_interact_2d::{Group, Interactable};
+use bevy_rapier2d::{physics::*, prelude::*};
+use core::fmt::Display;
 use std::collections::HashMap;
 
 #[derive(serde::Deserialize, TypeUuid, Debug, Clone)]
 #[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f1"]
 pub struct Item {
+    #[serde(default)]
     pub size: usize,
+    #[serde(default)]
+    pub z_index: f32,
+    #[serde(default)]
     pub item_type: ItemType,
+    #[serde(default)]
     pub attachment_points: AttachmentMap<AttachmentPoint>,
     pub sprite: SpriteAsset,
 }
@@ -64,6 +68,10 @@ impl Attachment {
     pub fn is_compatible(&self, item_size: &ItemSize, item_type: &ItemType) -> bool {
         self.max_size.compatible(item_size) && self.accepted_types.contains(&item_type)
     }
+
+    pub fn is_attached(&self) -> bool {
+        self.attached.is_some()
+    }
 }
 
 pub type Attachments = AttachmentMap<Attachment>;
@@ -71,16 +79,37 @@ pub type Attachments = AttachmentMap<Attachment>;
 #[derive(Debug, Inspectable)]
 pub struct WantToAttach(pub AttachmentPointId);
 
+#[derive(Debug, Inspectable)]
+pub struct ItemName(pub String);
+
 #[derive(Debug, Inspectable, Default)]
-pub struct EmptyAttachmentPoint {
+pub struct AttachmentPointMarker {
+    // pub attached: Option<Entity>,
+    pub id: AttachmentPointId,
+    pub selected: bool,
     pub show: bool,
 }
 
-impl EmptyAttachmentPoint {
-    pub fn toggle(&mut self) {
-        self.show = !self.show;
+impl AttachmentPointMarker {
+    pub fn new(id: AttachmentPointId) -> Self {
+        Self {
+            id,
+            ..Default::default()
+        }
     }
 }
+#[derive(Debug, Inspectable, Default)]
+
+pub struct Drivable {
+    pub linear_speed: f32,
+    pub angular_speed: f32,
+
+    pub linear_damping: f32,
+    pub angular_damping: f32,
+}
+
+#[derive(Debug, Inspectable, Default)]
+pub struct EmptyMarker;
 
 #[derive(Bundle)]
 pub struct ItemBundle {
@@ -92,17 +121,17 @@ pub struct ItemBundle {
     pub item_size: ItemSize,
     pub sprite_asset: SpriteAsset,
     pub attachments: Attachments,
+    pub item_name: ItemName,
+    #[bundle]
+    pub collider: ColliderBundle,
 }
 
 impl Item {
-    pub fn bundle(&self, information: &Information, ap: &AttachmentPoint) -> ItemBundle {
-        let o = ap.position;
+    pub fn bundle(&self, information: &Information, rel_pos: Transform) -> ItemBundle {
+        log::info!("item: {:?}", rel_pos.translation);
         ItemBundle {
             sprite_sheet_bundle: SpriteSheetBundle {
-                transform: Transform {
-                    translation: Vec3::new(o.0, o.1, o.2),
-                    ..Default::default()
-                },
+                transform: Transform::from_xyz(0.0, 0.0, self.z_index + 99.),
                 texture_atlas: information.atlas_handle.clone(),
                 ..Default::default()
             },
@@ -143,21 +172,87 @@ impl Item {
                     })
                     .collect(),
             ),
+            item_name: ItemName(information.name.clone()),
+            collider: ColliderBundle {
+                position: rel_pos.translation.into(),
+                shape: ColliderShape::cuboid(
+                    self.sprite.size.0 / (2. * PHYSICS_SCALE),
+                    self.sprite.size.1 / (2. * PHYSICS_SCALE),
+                ),
+                ..Default::default()
+            },
         }
     }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq, Inspectable, Hash, Copy)]
 pub enum ItemType {
+    Item,
+    Robot(RobotItemType),
+    Terrain(TerrainItemType),
+}
+
+impl Default for ItemType {
+    fn default() -> Self {
+        ItemType::Item
+    }
+}
+
+impl Display for ItemType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ItemType::Item => write!(f, "Item"),
+            ItemType::Robot(t) => write!(f, "{}", t.to_string()),
+            ItemType::Terrain(t) => write!(f, "{}", t.to_string()),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq, Inspectable, Hash, Copy)]
+pub enum RobotItemType {
     None,
     Camera,
     Body,
     GroundPropulsion,
 }
 
-impl Default for ItemType {
+impl Default for RobotItemType {
     fn default() -> Self {
-        ItemType::Body
+        Self::None
+    }
+}
+
+impl Display for RobotItemType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "None"),
+            Self::Camera => write!(f, "Camera"),
+            Self::Body => write!(f, "Body"),
+            Self::GroundPropulsion => write!(f, "Ground Propulsion"),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq, Inspectable, Hash, Copy)]
+pub enum TerrainItemType {
+    None,
+    Ground,
+    Wall,
+}
+
+impl Default for TerrainItemType {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl Display for TerrainItemType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "None"),
+            Self::Ground => write!(f, "Ground"),
+            Self::Wall => write!(f, "Wall"),
+        }
     }
 }
 
@@ -168,23 +263,6 @@ pub struct AttachmentPoint {
     pub item_types: Vec<ItemType>,
     pub max_item_size: usize,
     pub attached_item: Option<Entity>,
-}
-
-#[derive(AssetCollection, Reflect)]
-pub struct ItemCollection {
-    #[asset(path = "items/simple_body.it")]
-    pub simple_body: Handle<Item>,
-
-    #[asset(path = "items/simple_tracks.it")]
-    pub simple_tracks: Handle<Item>,
-
-    #[asset(path = "items/camera_hd.it")]
-    pub camera_hd: Handle<Item>,
-    #[asset(path = "items/camera_zoom.it")]
-    pub camera_zoom: Handle<Item>,
-
-    #[asset(path = "items/interaction_point.it")]
-    pub interaction_point: Handle<Item>,
 }
 
 #[derive(Debug, Clone, Inspectable)]
@@ -206,7 +284,17 @@ impl Default for AttachmentPointId {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+impl Display for AttachmentPointId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AttachmentPointId::MainCamera => write!(f, "Main Camera"),
+            AttachmentPointId::GroundPropulsion => write!(f, "Ground Propulsion"),
+            AttachmentPointId::LineFollowerCamera => write!(f, "Line Follower Camera"),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, Default)]
 pub struct AttachmentMap<T: Inspectable + Clone>(pub HashMap<AttachmentPointId, T>);
 
 impl<T: Inspectable + Clone> Inspectable for AttachmentMap<T> {
@@ -236,3 +324,12 @@ impl<T: Inspectable + Clone> Inspectable for AttachmentMap<T> {
 
     fn setup(_app: &mut AppBuilder) {}
 }
+
+// impl AttachmentMap<Attachment> {
+//     pub fn iter_empty(&self) -> Vec<&Attachment> {
+//         self.0
+//             .iter()
+//             .filter_map(|(_, v)| v.attached.as_ref())
+//             .collect()
+//     }
+// }

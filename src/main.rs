@@ -1,7 +1,8 @@
+use crate::game::loader::collection::ItemCollection;
+use crate::game::physics::controller::adjust_damping;
+use crate::game::physics::controller::drive_robot;
 use bevy::input::mouse::MouseMotion;
-use game::item_builder::ItemSpawner;
-use game::loader::item::*;
-
+use bevy::log;
 use bevy::render::camera::{Camera, CameraProjection};
 use bevy::{input::mouse::MouseWheel, prelude::*, render::camera::OrthographicProjection};
 use bevy_asset_ron::RonAssetPlugin;
@@ -11,9 +12,21 @@ use bevy_interact_2d::{
     Group, Interactable, InteractionDebugPlugin, InteractionPlugin, InteractionSource,
     InteractionState,
 };
+use bevy_prototype_debug_lines::DebugLines;
+use bevy_prototype_debug_lines::DebugLinesPlugin;
+use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::rapier::na::Vector2;
+use game::item_builder::ItemSpawner;
 use game::loader::information::InformationCollection;
-use game::loader::item::{AttachmentPointId, Item, ItemCollection};
+use game::loader::item::*;
+use game::loader::item::{AttachmentPointId, Item};
 use game::loader::sprite_asset::SpriteAsset;
+use game::physics::controller::reduce_sideways_vel;
+use game::world::terrain::build_terrain;
+use game::world::terrain::spawn_terrain;
+use game::world::terrain::update_terrain;
+use game::world::terrain::TerrainCollider;
+use game::world::tile_map;
 use std::fmt::Debug;
 mod dev;
 mod game;
@@ -23,17 +36,19 @@ use bevy_ecs_tilemap::prelude::*;
 
 use bevy_asset_loader::AssetLoader;
 use dev::inspector::InspectAllPlugin;
-use heron::prelude::*;
 use ui::{sidebar::*, types::UiState};
 
 use crate::game::loader::information::Information;
 use crate::ui::types::{AttachmentItem, AttachmentMenu};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
-enum GameState {
+pub enum GameState {
     AssetLoading,
-    Next,
+    SpriteLoading,
+    Game,
 }
+
+pub const PHYSICS_SCALE: f32 = 20.0;
 
 fn main() {
     let mut app = App::build();
@@ -47,22 +62,27 @@ fn main() {
         .add_plugin(EguiPlugin)
         .add_plugin(InspectAllPlugin)
         .add_plugin(TilemapPlugin)
-        .add_plugin(InteractionPlugin)
-        .add_plugin(PhysicsPlugin::default())
-        .add_plugin(RonAssetPlugin::<Item>::new(&["it"]));
-    AssetLoader::new(GameState::AssetLoading, GameState::Next)
+        .add_plugin(InteractionDebugPlugin)
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RonAssetPlugin::<Item>::new(&["it"]))
+        .add_plugin(DebugLinesPlugin);
+    AssetLoader::new(GameState::AssetLoading, GameState::SpriteLoading)
         .with_collection::<ItemCollection>()
         .build(&mut app);
     app.add_system_set(
-        SystemSet::on_enter(GameState::Next)
-            .with_system(draw_atlas.system().chain(draw_sprite.system()))
-            .with_system(setup.system().chain(startup.system()))
-            .with_system(load_assets.system())
-            .with_system(configure_visuals.system())
-            .with_system(setup_assets.system()),
+        SystemSet::on_enter(GameState::SpriteLoading)
+            .with_system(draw_atlas.system().chain(draw_sprite.system())),
     )
     .add_system_set(
-        SystemSet::on_update(GameState::Next)
+        SystemSet::on_enter(GameState::Game)
+            .with_system(setup.system())
+            // .with_system(tile_map::startup.system())
+            .with_system(load_assets.system())
+            .with_system(configure_visuals.system())
+            .with_system(spawn_terrain.system()),
+    )
+    .add_system_set(
+        SystemSet::on_update(GameState::Game)
             .with_system(animate_sprite_system.system())
             .with_system(update_ui_scale_factor.system())
             .with_system(move_camera.system())
@@ -70,42 +90,68 @@ fn main() {
             .with_system(interaction_state.system())
             .with_system(robot_config_ui.system())
             .with_system(attach_items.system())
-            .with_system(show_empty_attachment_points.system()),
+            .with_system(show_empty_attachment_points.system())
+            .with_system(select_marker.system())
+            .with_system(drive_robot.system())
+            .with_system(adjust_damping.system())
+            .with_system(display_events.system())
+            .with_system(reduce_sideways_vel.system())
+            .with_system(build_terrain.system())
+            // .with_system(print_test.system())
+            .with_system(update_terrain.system()),
     )
     .run();
 }
 
-fn setup_assets(server: Res<AssetServer>) {
-    // load our item configs!
-    let _handles = server.load_folder("descriptions");
+fn print_test(query: Query<(&ColliderPosition, &ItemName)>) {
+    query.for_each(|(collider, item_name)| {
+        log::info!(
+            "collider: {}, {} || {}",
+            collider.0.translation.x,
+            collider.0.translation.y,
+            item_name.0
+        );
+    });
 }
 
 fn draw_atlas(
     asset_server: Res<AssetServer>,
     item_collection: Res<ItemCollection>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut items: ResMut<Assets<Item>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    items: Res<Assets<Item>>,
     mut information_collection: ResMut<InformationCollection>,
+    mut app_state: ResMut<State<GameState>>,
 ) {
     for (i, value) in item_collection.iter_fields().enumerate() {
         let field_name = item_collection.name_at(i).unwrap();
         if let Some(value) = value.downcast_ref::<Handle<Item>>() {
-            let item = items.get_mut(value.clone()).unwrap();
+            let item = items.get(value.clone()).unwrap();
             let sprite_path = format!("sprites/{}.png", field_name);
-            println!("LOADING: {}", field_name);
-            println!("\t - sprite path: {}", sprite_path);
+            log::info!("LOADING: {}", field_name);
+            log::info!("\t - sprite path: {}", sprite_path);
 
             let texture_handle = asset_server.load(sprite_path.as_str());
             let texture_atlas = TextureAtlas::from_grid(
-                texture_handle,
+                texture_handle.clone(),
                 Vec2::new(item.sprite.size.0, item.sprite.size.1),
                 item.sprite.frames,
                 1,
             );
             let texture_atlas_handle = texture_atlases.add(texture_atlas);
-            information_collection.add(value.clone(), Information::new(texture_atlas_handle));
+            let material_handle = materials.add(texture_handle.into());
+            information_collection.add(
+                value.clone(),
+                Information::new(
+                    texture_atlas_handle,
+                    material_handle,
+                    item.sprite,
+                    field_name.to_string(),
+                ),
+            );
         }
     }
+    app_state.set(GameState::Game).unwrap();
 }
 
 fn draw_sprite(
@@ -113,28 +159,58 @@ fn draw_sprite(
     information_collection: Res<InformationCollection>,
     item_collection: Res<ItemCollection>,
     items: Res<Assets<Item>>,
+    mut rapier_config: ResMut<RapierConfiguration>,
 ) {
-    let spawner = ItemSpawner::new(&items, &information_collection, &item_collection);
+    let mut spawner = ItemSpawner::new(&items, &information_collection, &item_collection);
 
-    let parent = spawner.spawn(&mut commands, &item_collection.simple_body);
-    spawner.spawn_attached(
-        &mut commands,
-        parent,
-        &item_collection.simple_tracks,
-        AttachmentPointId::GroundPropulsion,
-    );
-    spawner.spawn_attached(
-        &mut commands,
-        parent,
-        &item_collection.camera_zoom,
-        AttachmentPointId::MainCamera,
-    );
-    spawner.spawn_attached(
-        &mut commands,
-        parent,
-        &item_collection.camera_hd,
-        AttachmentPointId::LineFollowerCamera,
-    );
+    rapier_config.gravity = Vector2::zeros();
+    rapier_config.scale = PHYSICS_SCALE;
+
+    spawner
+        .item(&item_collection.simple_body)
+        .rigid_body()
+        .interaction_markers()
+        .controllable()
+        // .at_position(Vec2::splat(5.0))
+        // .attach(
+        //     &item_collection.simple_tracks,
+        //     AttachmentPointId::GroundPropulsion,
+        // )
+        .attach(
+            &item_collection.camera_hd,
+            AttachmentPointId::LineFollowerCamera,
+        )
+        // .attach_move_in(&item_collection.camera_zoom, AttachmentPointId::MainCamera)
+        // .interaction_markers()
+        // .attach_move_in(&item_collection.camera_zoom, AttachmentPointId::MainCamera)
+        // .interaction_markers()
+        // .move_out()
+        // .attach(
+        //     &item_collection.camera_hd,
+        //     AttachmentPointId::LineFollowerCamera,
+        // )
+        .build(&mut commands, Transform::default());
+
+    spawner
+        .item(&item_collection.simple_body)
+        .rigid_body()
+        .interaction_markers()
+        // .controllable()
+        // .attach(
+        //     &item_collection.simple_tracks,
+        //     AttachmentPointId::GroundPropulsion,
+        // )
+        // .attach(
+        //     &item_collection.camera_hd,
+        //     AttachmentPointId::LineFollowerCamera,
+        // )
+        // .attach_move_in(&item_collection.camera_zoom, AttachmentPointId::MainCamera)
+        // .interaction_markers()
+        // .attach(&item_collection.camera_zoom, AttachmentPointId::MainCamera)
+        .build(
+            &mut commands,
+            Transform::from_translation(Vec3::new(5.0, 0.0, 0.0)),
+        );
 }
 
 fn attach_items(
@@ -150,10 +226,6 @@ fn attach_items(
     mut query_p: Query<(&mut Attachments,)>,
 ) {
     query.for_each_mut(|(e, p, want_attach, mut transform, item_size, item_type)| {
-        println!(
-            "CHILD WANT TO ATTACH TO {:?} with {:?} and {:?}",
-            want_attach, item_size, item_type
-        );
         if let Ok((mut attachments,)) = query_p.get_mut(p.0) {
             if attachments.0.get_mut(&want_attach.0).unwrap().try_attach(
                 e,
@@ -161,29 +233,58 @@ fn attach_items(
                 item_type,
                 &mut transform,
             ) {
+                log::info!("ATTACHED: {}", want_attach.0);
                 commands.entity(e).remove::<WantToAttach>();
+            } else {
+                log::info!("FAILED TO ATTACH: {}", want_attach.0);
+            }
+        }
+    });
+}
+
+fn select_marker(
+    eap_q: Query<
+        (&Parent, &AttachmentPointMarker, &mut TextureAtlasSprite),
+        Changed<AttachmentPointMarker>,
+    >,
+    parent_q: Query<&Attachments>,
+) {
+    eap_q.for_each_mut(|(parent, apm, mut texture)| {
+        if let Ok(attachments) = parent_q.get(parent.0) {
+            if let Some(attached) = attachments.0.get(&apm.id) {
+                if apm.selected {
+                    texture.color = if attached.is_attached() {
+                        Color::RED
+                    } else {
+                        Color::YELLOW
+                    };
+                } else {
+                    texture.color = if attached.is_attached() {
+                        Color::GRAY
+                    } else {
+                        Color::WHITE
+                    };
+                }
             }
         }
     });
 }
 
 fn show_empty_attachment_points(
-    mut eap_q: Query<
-        (&EmptyAttachmentPoint, &Children, &mut Interactable),
-        Changed<EmptyAttachmentPoint>,
-    >,
-    mut chi_q: Query<&mut Visible>,
+    mut eap_q: Query<(&mut AttachmentPointMarker, &mut Interactable, &mut Visible)>,
+    ui_state: ResMut<UiState>,
 ) {
-    for (eap, children, mut interactable) in eap_q.iter_mut() {
-        for child in children.iter() {
-            if let Ok(mut vis) = chi_q.get_mut(*child) {
-                vis.is_visible = eap.show;
-                if !eap.show {
-                    interactable.groups = vec![];
-                } else {
-                    interactable.groups = vec![Group(1)];
-                }
-            }
+    if !ui_state.is_changed() {
+        return;
+    }
+    for (mut apm, mut interactable, mut vis) in eap_q.iter_mut() {
+        apm.show = ui_state.show_attachment_points;
+        if apm.show {
+            vis.is_visible = true;
+            interactable.groups = vec![Group(1)];
+        } else {
+            interactable.groups = vec![];
+            vis.is_visible = false;
         }
     }
 }
@@ -200,11 +301,7 @@ fn animate_sprite_system(
     }
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    _materials: ResMut<Assets<ColorMaterial>>,
-) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(InteractionSource {
@@ -213,33 +310,6 @@ fn setup(
         });
 
     asset_server.watch_for_changes().unwrap();
-}
-
-fn startup(_commands: Commands, _map_query: MapQuery) {
-    // let material_handle = // TODO
-
-    // let map_entity = commands.spawn().id();
-    // let mut map = Map::new(0u16, map_entity);
-
-    // let (mut layer_builder, _) = LayerBuilder::new(
-    //     &mut commands,
-    //     LayerSettings::new(
-    //         UVec2::new(2, 2),
-    //         UVec2::new(8, 8),
-    //         Vec2::new(48.0, 48.0),
-    //         Vec2::new(48.0, 48.0),
-    //     ),
-    //     0u16,
-    //     0u16,
-    // );
-    // layer_builder.set_all(TileBundle::default());
-    // let layer_entity = map_query.build_layer(&mut commands, layer_builder, material_handle);
-    // map.add_layer(&mut commands, 0u16, layer_entity);
-    // commands
-    //     .entity(map_entity)
-    //     .insert(map)
-    //     .insert(Transform::from_xyz(-128.0, -128.0, 0.0))
-    //     .insert(GlobalTransform::default());
 }
 
 fn move_camera(
@@ -304,9 +374,7 @@ const MAX_ZOOM: f32 = 3.0;
 fn interaction_state(
     mouse_button_input: Res<Input<MouseButton>>,
     interaction_state: Res<InteractionState>,
-    query: Query<(&Parent, &Interactable, &AttachmentPointId)>,
-    query2: Query<(&ItemSize, &ItemType)>,
-    items: Res<Assets<Item>>,
+    mut query: Query<(&Parent, &mut AttachmentPointMarker, &AttachmentPointId)>,
     mut ui_state: ResMut<UiState>,
 ) {
     if !mouse_button_input.just_released(MouseButton::Left) {
@@ -318,19 +386,30 @@ fn interaction_state(
     }
 
     for (entity, coords) in interaction_state.get_group(Group(1)).iter() {
-        // robots.selected_robot = Some(*entity);
-        println!("Pressed {:?} at {:?}", entity, coords);
-        let (parent, interactable, id) = query.get(entity.clone()).unwrap();
-        let parent_item = query2.get(parent.0).unwrap();
-        println!(
-            "Attachment point {:?} with requirements {:?}",
-            id, parent_item
-        );
+        query.for_each_mut(|(_, mut apm, _)| {
+            apm.selected = false;
+        });
+
+        let (parent, mut apm, id) = query.get_mut(entity.clone()).unwrap();
+        apm.selected = true;
         ui_state.show_attachment_menu = Some(AttachmentMenu {
             item_to_attach_to: AttachmentItem {
                 entity: Some(parent.0),
                 attachment_point_id: *id,
             },
         });
+    }
+}
+
+fn display_events(
+    mut intersection_events: EventReader<IntersectionEvent>,
+    mut contact_events: EventReader<ContactEvent>,
+) {
+    for intersection_event in intersection_events.iter() {
+        log::info!("Received intersection event: {:?}", intersection_event);
+    }
+
+    for contact_event in contact_events.iter() {
+        log::info!("Received contact event: {:?}", contact_event);
     }
 }

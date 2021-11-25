@@ -1,6 +1,6 @@
 (
     size: 1,
-    item_type: Camera,
+    item_type: Robot(Camera),
     attachment_points: ({}),
     sprite: (
         size: (11., 10.),

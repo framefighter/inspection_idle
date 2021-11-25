@@ -1,6 +1,6 @@
 (
     size: 1,
-    item_type: GroundPropulsion,
+    item_type: Robot(GroundPropulsion),
     attachment_points: ({}),
     sprite: (
         size: (48., 48.),
