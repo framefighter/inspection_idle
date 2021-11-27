@@ -64,7 +64,7 @@ pub fn select_marker(
         // robots.selected_robot = Some(*entity);
     }
 
-    for (entity, coords) in interaction_state.get_group(Group(1)).iter() {
+    for (entity, _coords) in interaction_state.get_group(Group(1)).iter() {
         query.for_each_mut(|(_, mut apm, _)| {
             apm.selected = false;
         });

@@ -1,7 +1,7 @@
 use bevy::prelude::Entity;
 use bevy_inspector_egui::Inspectable;
 
-use crate::game::loader::item::{AttachmentPointId, ItemSize, SelectedAttachmentPoint};
+use crate::game::loader::item::{AttachmentPointId};
 
 
 

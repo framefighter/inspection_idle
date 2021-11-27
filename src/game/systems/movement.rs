@@ -1,8 +1,8 @@
-use crate::game::loader::item::{Attachments, Selected};
+use crate::game::loader::item::{Selected};
 use crate::utils::rigid_body::find_parent;
 use crate::Drivable;
 use bevy::prelude::*;
-use bevy_prototype_debug_lines::*;
+
 use bevy_rapier2d::prelude::*;
 
 pub fn drive_robot(

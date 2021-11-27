@@ -1,17 +1,15 @@
 use crate::PHYSICS_SCALE;
 
 use super::{
-    information::{Information, InformationCollection},
+    information::{Information},
     sprite_asset::SpriteAsset,
 };
 use bevy::{
-    asset::HandleId,
     log,
     prelude::*,
-    reflect::{Reflect, TypeUuid},
-    utils::tracing::field::Empty,
+    reflect::{TypeUuid},
 };
-use bevy_asset_loader::AssetCollection;
+
 use bevy_inspector_egui::Inspectable;
 use bevy_interact_2d::{Group, Interactable};
 use bevy_rapier2d::{physics::*, prelude::*};

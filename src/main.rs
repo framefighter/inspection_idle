@@ -1,22 +1,22 @@
 use crate::game::systems::*;
-use bevy::input::mouse::MouseMotion;
+
 use bevy::log;
-use bevy::render::camera::{Camera, CameraProjection};
-use bevy::{input::mouse::MouseWheel, prelude::*, render::camera::OrthographicProjection};
+
+use bevy::{prelude::*};
 use bevy_asset_ron::RonAssetPlugin;
 use bevy_ecs_tilemap::TilemapPlugin;
-use bevy_egui::{EguiContext, EguiPlugin};
+use bevy_egui::{EguiPlugin};
 use bevy_interact_2d::{
-    Group, Interactable, InteractionDebugPlugin, InteractionSource, InteractionState,
+    InteractionDebugPlugin,
 };
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier2d::prelude::*;
-use bevy_rapier2d::rapier::na::Vector2;
-use game::item_builder::RobotSpawner;
+
+
 use game::loader::collection::ItemCollection;
 use game::loader::information::InformationCollection;
 use game::loader::item::*;
-use game::loader::item::{AttachmentPointId, Item};
+use game::loader::item::{Item};
 use game::loader::sprite_asset::SpriteAsset;
 use game::types::ui::*;
 use std::fmt::Debug;
@@ -28,7 +28,7 @@ mod utils;
 use bevy_asset_loader::AssetLoader;
 use dev::inspector::InspectAllPlugin;
 
-use crate::game::loader::information::Information;
+
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum GameState {

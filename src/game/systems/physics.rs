@@ -1,4 +1,4 @@
-use crate::game::loader::item::{Attachments, Selected};
+use crate::game::loader::item::{Attachments};
 use crate::Drivable;
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
@@ -7,7 +7,7 @@ use bevy_rapier2d::rapier::na::Vector2;
 
 pub fn reduce_sideways_vel(
     mut lines: ResMut<DebugLines>,
-    rapier_parameters: Res<RapierConfiguration>,
+    _rapier_parameters: Res<RapierConfiguration>,
     mut player_info: Query<
         (
             &Drivable,
@@ -20,7 +20,7 @@ pub fn reduce_sideways_vel(
         Changed<RigidBodyVelocity>,
     >,
 ) {
-    for (drive, mut forces, mut rb_vel, pos, trans, attach) in player_info.iter_mut() {
+    for (_drive, _forces, mut rb_vel, pos, trans, _attach) in player_info.iter_mut() {
         let dir = pos.position.transform_vector(&Vector2::y());
         let angle = dir.angle(&rb_vel.linvel);
         let projected = rb_vel.linvel.magnitude() * angle.cos();

@@ -1,9 +1,9 @@
 use super::loader::{
-    information::{Information, InformationCollection},
+    information::{InformationCollection},
     item::*,
 };
 use crate::{game::loader::collection::ItemCollection, PHYSICS_SCALE};
-use bevy::{asset::HandleId, ecs::component::Component, log, prelude::*, utils::HashMap};
+use bevy::{log, prelude::*};
 use bevy_interact_2d::{Group, Interactable};
 use bevy_rapier2d::prelude::*;
 

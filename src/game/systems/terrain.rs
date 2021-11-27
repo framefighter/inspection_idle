@@ -1,12 +1,12 @@
 use bevy::{log, prelude::*};
-use bevy_inspector_egui::Inspectable;
+
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier2d::prelude::*;
 use itertools::Itertools;
 
 use crate::game::types::terrain::TerrainCollider;
 
-pub fn spawn(mut commands: Commands) {
+pub fn spawn(_commands: Commands) {
     // eprintln!("spawn_terrain");
     // commands
     //     .spawn_bundle(RigidBodyBundle {
