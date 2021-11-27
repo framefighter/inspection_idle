@@ -18,8 +18,16 @@
         ],
         max_item_size: 1,
       ),
-      GroundPropulsion: (
-        position: (0., 0., -1.),
+      GroundPropulsionRight: (
+        position: (15., 0., -1.),
+        rotation: 0.,
+        item_types: [
+            Robot(GroundPropulsion),
+        ],
+        max_item_size: 1,
+      ),
+      GroundPropulsionLeft: (
+        position: (-15., 0., -1.),
         rotation: 0.,
         item_types: [
             Robot(GroundPropulsion),

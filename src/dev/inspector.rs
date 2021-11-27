@@ -1,14 +1,18 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::*;
 
-use crate::{game::{loader::{item::*, sprite_asset::SpriteAsset}, world::terrain::TerrainCollider}, ui::types::UiState};
+use crate::game::{
+    loader::{item::*, sprite_asset::SpriteAsset},
+    types::terrain::TerrainCollider,
+};
 
 pub struct InspectAllPlugin;
 
 impl Plugin for InspectAllPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_plugin(WorldInspectorPlugin::new())
-            .add_plugin(InspectorPlugin::<UiState>::new());
+            // .add_plugin(InspectorPlugin::<UiState>::new())
+            ;
         let mut registry = app
             .world_mut()
             .get_resource_or_insert_with(InspectableRegistry::default);

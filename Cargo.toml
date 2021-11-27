@@ -10,7 +10,7 @@ bevy_egui = "0.7.1"
 bevy-inspector-egui = "0.6.1"
 bevy_prototype_lyon = "0.3.1"
 bevy_svg = "0.3.1"
-bevy_rapier2d = "0.11.0"
+bevy_rapier2d = {version = "0.11.0", features = ["render"]}
 bevy_ecs_tilemap = "0.4.0"
 bevy_interact_2d = "0.5.3"
 rand = "0.8"

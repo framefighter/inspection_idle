@@ -4,7 +4,13 @@ use super::{
     information::{Information, InformationCollection},
     sprite_asset::SpriteAsset,
 };
-use bevy::{asset::HandleId, log, prelude::*, reflect::{Reflect, TypeUuid}, utils::tracing::field::Empty};
+use bevy::{
+    asset::HandleId,
+    log,
+    prelude::*,
+    reflect::{Reflect, TypeUuid},
+    utils::tracing::field::Empty,
+};
 use bevy_asset_loader::AssetCollection;
 use bevy_inspector_egui::Inspectable;
 use bevy_interact_2d::{Group, Interactable};
@@ -45,24 +51,8 @@ pub struct Attachment {
 }
 
 impl Attachment {
-    fn attach(&mut self, item: Entity, transform: &mut Transform) {
+    pub fn attach(&mut self, item: Entity) {
         self.attached = Some(item);
-        *transform = self.transform;
-    }
-
-    pub fn try_attach(
-        &mut self,
-        item: Entity,
-        item_size: &ItemSize,
-        item_type: &ItemType,
-        transform: &mut Transform,
-    ) -> bool {
-        if self.is_compatible(item_size, item_type) {
-            self.attach(item, transform);
-            true
-        } else {
-            false
-        }
     }
 
     pub fn is_compatible(&self, item_size: &ItemSize, item_type: &ItemType) -> bool {
@@ -108,6 +98,8 @@ pub struct Drivable {
     pub angular_damping: f32,
 }
 
+pub struct Selected(pub bool);
+
 #[derive(Debug, Inspectable, Default)]
 pub struct EmptyMarker;
 
@@ -116,7 +108,6 @@ pub struct ItemBundle {
     #[bundle]
     pub sprite_sheet_bundle: SpriteSheetBundle,
     pub interactable: Interactable,
-    pub timer: Timer,
     pub item_type: ItemType,
     pub item_size: ItemSize,
     pub sprite_asset: SpriteAsset,
@@ -127,15 +118,18 @@ pub struct ItemBundle {
 }
 
 impl Item {
-    pub fn bundle(&self, information: &Information, rel_pos: Transform) -> ItemBundle {
-        log::info!("item: {:?}", rel_pos.translation);
+    pub fn bundle(&self, information: &Information, transform: Transform) -> ItemBundle {
+        log::info!(
+            "Spawning {} at {:?}",
+            information.name,
+            transform.translation
+        );
         ItemBundle {
             sprite_sheet_bundle: SpriteSheetBundle {
-                transform: Transform::from_xyz(0.0, 0.0, self.z_index + 99.),
+                transform,
                 texture_atlas: information.atlas_handle.clone(),
                 ..Default::default()
             },
-            timer: Timer::from_seconds(0.1, true),
             interactable: Interactable {
                 groups: vec![Group(0)],
                 bounding_box: (
@@ -174,13 +168,14 @@ impl Item {
             ),
             item_name: ItemName(information.name.clone()),
             collider: ColliderBundle {
-                position: rel_pos.translation.into(),
+                // position: (transform.translation / PHYSICS_SCALE).into(),
                 shape: ColliderShape::cuboid(
                     self.sprite.size.0 / (2. * PHYSICS_SCALE),
                     self.sprite.size.1 / (2. * PHYSICS_SCALE),
                 ),
                 ..Default::default()
             },
+
         }
     }
 }
@@ -274,7 +269,8 @@ pub struct SelectedAttachmentPoint {
 #[derive(serde::Deserialize, Hash, Eq, PartialEq, Debug, Clone, Copy, Inspectable)]
 pub enum AttachmentPointId {
     MainCamera,
-    GroundPropulsion,
+    GroundPropulsionRight,
+    GroundPropulsionLeft,
     LineFollowerCamera,
 }
 
@@ -287,9 +283,10 @@ impl Default for AttachmentPointId {
 impl Display for AttachmentPointId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AttachmentPointId::MainCamera => write!(f, "Main Camera"),
-            AttachmentPointId::GroundPropulsion => write!(f, "Ground Propulsion"),
-            AttachmentPointId::LineFollowerCamera => write!(f, "Line Follower Camera"),
+            Self::MainCamera => write!(f, "Main Camera"),
+            Self::GroundPropulsionRight => write!(f, "Ground Propulsion Right"),
+            Self::GroundPropulsionLeft => write!(f, "Ground Propulsion Left"),
+            Self::LineFollowerCamera => write!(f, "Line Follower Camera"),
         }
     }
 }
@@ -324,12 +321,3 @@ impl<T: Inspectable + Clone> Inspectable for AttachmentMap<T> {
 
     fn setup(_app: &mut AppBuilder) {}
 }
-
-// impl AttachmentMap<Attachment> {
-//     pub fn iter_empty(&self) -> Vec<&Attachment> {
-//         self.0
-//             .iter()
-//             .filter_map(|(_, v)| v.attached.as_ref())
-//             .collect()
-//     }
-// }

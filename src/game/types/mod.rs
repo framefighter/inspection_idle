@@ -1,2 +1,2 @@
 pub mod terrain;
-pub mod tile_map;
+pub mod ui;

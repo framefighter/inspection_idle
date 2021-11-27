@@ -1,23 +1,21 @@
-use crate::game::loader::collection::ItemCollection;
-use bevy::prelude::*;
+use crate::game::{loader::collection::ItemCollection, types::ui::UiState};
+use bevy::{log, prelude::*};
 use bevy_egui::{
-    egui::{self, Color32, FontDefinitions, FontFamily, Ui},
+    egui::{self, Color32, FontDefinitions, FontFamily},
     EguiContext, EguiSettings,
 };
 
 use crate::game::{
-    item_builder::ItemSpawner,
+    item_builder::RobotSpawner,
     loader::{information::InformationCollection, item::*},
 };
-
-use super::types::UiState;
 
 pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
 
     fonts.font_data.insert(
         "my_font".to_owned(),
-        std::borrow::Cow::Borrowed(include_bytes!("../../assets/fonts/CONSOLA.ttf")),
+        std::borrow::Cow::Borrowed(include_bytes!("../../../assets/fonts/CONSOLA.ttf")),
     ); // .ttf and .otf supported
 
     // Put my font first (highest priority):
@@ -87,7 +85,7 @@ pub fn robot_config_ui(
             if ui_state.show_attachment_points {
                 if let Some(attachment_menu) = &ui_state.show_attachment_menu {
                     let mut spawner =
-                        ItemSpawner::new(&items, &information_collection, &item_collection);
+                        RobotSpawner::init(&items, &information_collection, &item_collection);
                     ui.separator();
                     if let Some(e) = attachment_menu.item_to_attach_to.entity {
                         if let Ok(ref mut attachments) = query_p.get_mut(e) {
@@ -142,18 +140,22 @@ pub fn robot_config_ui(
                                             if ui.button(format!("{}", information.name)).clicked()
                                             {
                                                 ui_state.show_attachment_menu =
-                                                        ui_state.show_attachment_menu.clone();
+                                                    ui_state.show_attachment_menu.clone();
                                                 if let Some(attached_entity) = ad.attached {
                                                     ad.attached = None;
                                                     commands
                                                         .entity(attached_entity)
                                                         .despawn_recursive();
                                                 }
+                                                log::info!(
+                                                    "ADDING {} with transform: {:?}",
+                                                    ad.id,
+                                                    ad.transform
+                                                );
                                                 spawner
-                                                    .item(&handle)
-                                                    .with_parent(e, ad.id)
-                                                    .interaction_markers()
-                                                    .build(&mut commands, ad.transform);
+                                                    .new()
+                                                    .attachment(&handle, ad.id, e, ad.transform)
+                                                    .build(&mut commands);
                                             }
                                         }
                                     }

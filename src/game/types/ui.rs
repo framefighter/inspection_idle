@@ -7,17 +7,17 @@ use crate::game::loader::item::{AttachmentPointId, ItemSize, SelectedAttachmentP
 
 #[derive(Default, Inspectable, Clone)]
 pub struct UiState {
-    pub show_attachment_menu: Option<AttachmentMenu>,
+    pub show_attachment_menu: Option<UiAttachmentMenu>,
     pub show_attachment_points: bool,
 }
 
 #[derive(Default, Inspectable, Clone)]
-pub struct AttachmentMenu {
-    pub item_to_attach_to: AttachmentItem,
+pub struct UiAttachmentMenu {
+    pub item_to_attach_to: UiAttachmentItem,
 }
 
 #[derive(Default, Inspectable, Clone)]
-pub struct AttachmentItem {
+pub struct UiAttachmentItem {
     pub entity: Option<Entity>,
     pub attachment_point_id: AttachmentPointId,
 }

@@ -1,0 +1,9 @@
+(
+    size: 1,
+    item_type: Robot(GroundPropulsion),
+    attachment_points: ({}),
+    sprite: (
+        size: (10., 48.),
+        frames: 8,
+    )
+)

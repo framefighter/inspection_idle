@@ -2,24 +2,72 @@ use super::loader::{
     information::{Information, InformationCollection},
     item::*,
 };
-use crate::game::loader::collection::ItemCollection;
-use bevy::{log, prelude::*, utils::HashMap};
+use crate::{game::loader::collection::ItemCollection, PHYSICS_SCALE};
+use bevy::{asset::HandleId, ecs::component::Component, log, prelude::*, utils::HashMap};
 use bevy_interact_2d::{Group, Interactable};
 use bevy_rapier2d::prelude::*;
 
-pub struct ItemSpawner<'w> {
+#[derive(Default, Bundle)]
+pub struct RigidBodyComponents {
+    #[bundle]
+    rigid_body: RigidBodyBundle,
+    pos_sync: RigidBodyPositionSync,
+}
+
+#[derive(Default, Bundle)]
+pub struct InteractionMarkerBundle {
+    #[bundle]
+    sprite: SpriteSheetBundle,
+    interactable: Interactable,
+    apm: AttachmentPointMarker,
+    aid: AttachmentPointId,
+}
+
+#[derive(Clone)]
+pub struct SpawnItem {
+    children: Vec<SpawnItem>,
+    handle: Handle<Item>,
+    ap: Option<AttachmentPointId>,
+    root: bool,
+}
+
+impl SpawnItem {
+    pub fn root(handle: Handle<Item>) -> Self {
+        SpawnItem {
+            children: vec![],
+            handle,
+            ap: None,
+            root: true,
+        }
+    }
+
+    pub fn child(handle: Handle<Item>, ap: AttachmentPointId) -> Self {
+        SpawnItem {
+            children: vec![],
+            handle,
+            ap: Some(ap),
+            root: false,
+        }
+    }
+
+    pub fn add_child(&mut self, child: SpawnItem) {
+        self.children.push(child);
+    }
+}
+
+pub struct RobotSpawner<'w> {
     pub items: &'w Assets<Item>,
     pub information_collection: &'w InformationCollection,
     pub item_collection: &'w ItemCollection,
 
-    pub attach_parent: Option<(Entity, AttachmentPointId)>,
-    pub item_id: Option<usize>,
-    pub item_types: Vec<(Handle<Item>, bool, bool, bool)>,
-    pub attachments: HashMap<usize, Vec<(Handle<Item>, AttachmentPointId)>>,
+    selected: bool,
+    super_parent: Option<(Entity, AttachmentPointId)>,
+    transform: Transform,
+    spawn_item: Option<SpawnItem>,
 }
 
-impl<'w> ItemSpawner<'w> {
-    pub fn new(
+impl<'w> RobotSpawner<'w> {
+    pub fn init(
         items: &'w Assets<Item>,
         information_collection: &'w InformationCollection,
         item_collection: &'w ItemCollection,
@@ -28,143 +76,178 @@ impl<'w> ItemSpawner<'w> {
             items,
             information_collection,
             item_collection,
-            item_types: vec![],
-            attachments: HashMap::default(),
-            item_id: None,
-            attach_parent: None,
+            selected: false,
+            spawn_item: None,
+            super_parent: None,
+            transform: Transform::default(),
         }
     }
 
-    pub fn item(&mut self, handle: &Handle<Item>) -> &mut Self {
-        self.item_types.push((handle.clone(), false, false, false));
-        self.item_id = Some(self.item_id.map(|id| id + 1).unwrap_or_default());
-        log::info!("\t\t >> moving in: {:?}", self.item_id);
+    pub fn new(&mut self) -> &mut Self {
+        self.super_parent = None;
+        self.spawn_item = None;
+        self.transform = Transform::default();
+        self.selected = false;
         self
     }
-    pub fn rigid_body(&mut self) -> &mut Self {
-        self.item_types
-            .get_mut(self.item_id.unwrap_or_default())
-            .unwrap()
-            .1 = true;
+
+    pub fn robot(&mut self, handle: &Handle<Item>) -> &mut Self {
+        if self.spawn_item.is_none() {
+            self.spawn_item = Some(SpawnItem::root(handle.clone()));
+        } else {
+            log::warn!("RobotSpawner: robot() called twice without calling new()");
+        }
         self
     }
-    pub fn interaction_markers(&mut self) -> &mut Self {
-        self.item_types
-            .get_mut(self.item_id.unwrap_or_default())
-            .unwrap()
-            .2 = true;
+
+    pub fn attachment(
+        &mut self,
+        handle: &Handle<Item>,
+        aid: AttachmentPointId,
+        parent: Entity,
+        transform: Transform,
+    ) -> &mut Self {
+        if self.spawn_item.is_none() {
+            self.spawn_item = Some(SpawnItem::root(handle.clone()));
+            if self.super_parent.is_none() {
+                self.super_parent = Some((parent, aid));
+                self.transform = transform;
+            } else {
+            }
+        } else {
+            log::warn!("RobotSpawner: attachment() called twice without calling new()");
+        }
         self
     }
-    pub fn controllable(&mut self) -> &mut Self {
-        self.item_types
-            .get_mut(self.item_id.unwrap_or_default())
-            .unwrap()
-            .3 = true;
-        self
-    }
-    pub fn with_parent(&mut self, parent: Entity, aid: AttachmentPointId) -> &mut Self {
-        self.attach_parent = Some((parent, aid));
+
+    pub fn transform(&mut self, transform: Transform) -> &mut Self {
+        self.transform = transform;
         self
     }
     pub fn attach(&mut self, handle: &Handle<Item>, id: AttachmentPointId) -> &mut Self {
-        if let Some(item_id) = self.item_id {
-            log::info!("\t - attaching: {:?}", item_id);
-            self.attachments
-                .entry(item_id)
-                .and_modify(|val| val.push((handle.clone(), id)))
-                .or_insert(vec![(handle.clone(), id)]);
+        if let Some(spawn_item) = &mut self.spawn_item {
+            spawn_item.add_child(SpawnItem::child(handle.clone(), id));
+        } else {
+            log::warn!("RobotSpawner: attach() called without calling robot()");
         }
         self
     }
-    pub fn attach_move_in(&mut self, handle: &Handle<Item>, id: AttachmentPointId) -> &mut Self {
-        self.attach(handle, id);
-        self.item(handle);
+    pub fn select(&mut self) -> &mut Self {
+        self.selected = true;
         self
     }
-    pub fn move_out(&mut self) -> &mut Self {
-        self.item_id = self.item_id.map(|id| id.saturating_sub(1));
-        log::info!("\t\t << moving out: {:?}", self.item_id);
-        self
-    }
-    pub fn move_to_root(&mut self) -> &mut Self {
-        self.item_id = self.item_id.map(|_| 0);
-        self
-    }
-    pub fn build(&mut self, commands: &mut Commands, transform: Transform) -> Entity {
-        let mut roots: HashMap<Handle<Item>, Entity> = HashMap::default();
-        let ic = self.information_collection;
-        let items = self.items;
-        log::info!("building item");
-        for (i, (handle, rigid, markers, controllable)) in self.item_types.iter().enumerate() {
-            let item = items.get(handle.clone()).unwrap();
-            let information = ic.get(&handle).unwrap();
-            let bundle = Item::bundle(item, information, transform);
-            let attachments = bundle.attachments.clone();
-            log::info!("item: {:?}", information.name);
-            let mut children = vec![];
-            for (handle, aid) in self.attachments.get(&i).unwrap_or(&vec![]) {
-                let item = self.items.get(handle.clone()).unwrap();
-                let information = ic.get(&handle).unwrap();
-                let at = attachments.0.get(aid).unwrap();
-                let bundle = Item::bundle(item, information, at.transform);
-                let attachments = bundle.attachments.clone();
-                log::info!("\t - with child: {:?} | {}", information.name, i);
-                let entity = commands
-                    .spawn_bundle(bundle)
-                    .insert(WantToAttach(*aid))
-                    .id();
-                if *markers {
-                    self.with_interaction_markers(commands, entity, &attachments);
-                }
-                roots.entry(handle.clone()).or_insert(entity);
-                children.push(entity);
-            }
-
-            let parent = if roots.contains_key(&handle) {
-                log::info!("> {} | {} already spawned", information.name, i);
-                roots.get(&handle).unwrap().clone()
+    pub fn attach_then(
+        &mut self,
+        handle: &Handle<Item>,
+        id: AttachmentPointId,
+        f: impl FnOnce(&mut Self) -> &mut Self,
+    ) -> &mut Self {
+        let child_spawner = &mut Self {
+            items: self.items,
+            information_collection: self.information_collection,
+            item_collection: self.item_collection,
+            selected: false,
+            super_parent: None,
+            spawn_item: Some(SpawnItem::child(handle.clone(), id)),
+            transform: Transform::default(),
+        };
+        let spawner = f(child_spawner);
+        if let Some(spawn_item) = &mut self.spawn_item {
+            if let Some(child_item) = spawner.spawn_item.clone() {
+                spawn_item.add_child(child_item);
             } else {
-                log::info!("> spawning new {} | {}", information.name, i);
-                let entity = commands.spawn_bundle(bundle).id();
-                roots.insert(handle.clone(), entity);
-                entity
-            };
-
-            // let parent = roots
-            //     .entry(handle.clone())
-            //     .or_insert(commands.spawn_bundle(bundle).id());
-            if *markers {
-                self.with_interaction_markers(commands, parent, &attachments);
+                log::warn!(
+                    "RobotSpawner: attach_then() called without invalid handle: {:?}",
+                    handle
+                );
             }
-            if *rigid {
-                self.with_rigid_body(commands, parent, transform);
-            }
-            if *controllable {
-                self.with_driver(commands, parent);
-            }
-            commands.entity(parent).push_children(&children);
-            if let Some((super_parent, aid)) = self.attach_parent {
-                commands.entity(parent).insert(WantToAttach(aid));
-                commands.entity(super_parent).push_children(&[parent]);
-            }
+        } else {
+            log::warn!("RobotSpawner: attach_then() called without calling robot()");
         }
-        let entity = roots
-            .get(&self.item_types.get(0).unwrap().0)
-            .unwrap()
-            .clone();
-        self.item_types = vec![];
-        self.attachments = HashMap::default();
-        self.item_id = None;
-        self.attach_parent = None;
-        entity
+        self
+    }
+    pub fn build(&mut self, commands: &mut Commands) -> Entity {
+        if let Some(spawn_item) = &self.spawn_item {
+            if let Some(item) = self.items.get(spawn_item.handle.clone()) {
+                if let Some(information) = self.information_collection.get(&spawn_item.handle) {
+                    let bundle = item.bundle(&information, self.transform);
+                    let ats = bundle.attachments.0.clone();
+                    let markers = self.interaction_markers(&bundle.attachments);
+                    let parent = commands
+                        .spawn_bundle(bundle)
+                        .with_children(|cb| {
+                            markers.into_iter().for_each(|im| {
+                                cb.spawn_bundle(im);
+                            })
+                        })
+                        .id();
+
+                    if item.item_type == ItemType::Robot(RobotItemType::GroundPropulsion) {
+                        commands.entity(parent).insert(self.controller());
+                    }
+                    if self.selected {
+                        commands.entity(parent).insert(Selected(true));
+                    }
+                    if let Some(aid) = spawn_item.ap {
+                        commands.entity(parent).insert(WantToAttach(aid));
+                    }
+                    if let Some((super_parent, aid)) = &self.super_parent {
+                        commands.entity(*super_parent).push_children(&[parent]);
+                        commands.entity(parent).insert(WantToAttach(*aid));
+                    } else if spawn_item.root {
+                        log::info!("RobotSpawner: ROOT Robot spawned");
+                        commands.entity(parent).insert_bundle(self.rigid_body());
+                    }
+                    let children: Vec<Entity> = spawn_item
+                        .children
+                        .iter()
+                        .map(|child| {
+                            let transform = child
+                                .ap
+                                .map(|ap| {
+                                    if let Some(at) = ats.get(&ap) {
+                                        log::info!("Found transform for attachment");
+                                        at.transform
+                                    } else {
+                                        Transform::default()
+                                    }
+                                })
+                                .unwrap_or_default();
+                            let child_spawner = &mut Self {
+                                items: self.items,
+                                information_collection: self.information_collection,
+                                item_collection: self.item_collection,
+                                selected: false,
+                                super_parent: None,
+                                spawn_item: Some(child.clone()),
+                                transform,
+                            };
+                            child_spawner.build(commands)
+                        })
+                        .collect();
+
+                    commands.entity(parent).push_children(&children).id()
+                } else {
+                    log::warn!(
+                        "RobotSpawner: build() can not find information for handle: {:?}",
+                        spawn_item.handle
+                    );
+                    commands.spawn().id()
+                }
+            } else {
+                log::warn!(
+                    "RobotSpawner: build() can not find item for handle: {:?}",
+                    spawn_item.handle
+                );
+                commands.spawn().id()
+            }
+        } else {
+            log::warn!("RobotSpawner: build() called without calling robot()");
+            commands.spawn().id()
+        }
     }
 
-    fn with_interaction_markers(
-        &self,
-        commands: &mut Commands,
-        entity: Entity,
-        attachments: &Attachments,
-    ) -> Entity {
+    fn interaction_markers(&self, attachments: &Attachments) -> Vec<InteractionMarkerBundle> {
         log::info!("\t - with interaction markers");
         let atlas = self
             .information_collection
@@ -172,63 +255,51 @@ impl<'w> ItemSpawner<'w> {
             .unwrap()
             .atlas_handle
             .clone();
-        commands
-            .entity(entity)
-            .with_children(|parent| {
-                let size = Vec3::splat(2.0);
-                for (id, attachment) in attachments.0.iter() {
-                    parent
-                        .spawn_bundle(SpriteSheetBundle {
-                            transform: Transform {
-                                translation: attachment.transform.mul_vec3(Vec3::new(1., 1., 99.)),
-                                scale: size / 10.,
-                                ..Default::default()
-                            },
-                            texture_atlas: atlas.clone(),
-                            ..Default::default()
-                        })
-                        .insert(Interactable {
-                            groups: vec![Group(1)],
-                            bounding_box: (-size.truncate() * 5., size.truncate() * 5.),
-                        })
-                        .insert(AttachmentPointMarker::new(*id))
-                        .insert(id.clone());
-                }
+
+        let size = Vec3::splat(2.0);
+        attachments
+            .0
+            .iter()
+            .map(|(id, attachment)| InteractionMarkerBundle {
+                sprite: SpriteSheetBundle {
+                    transform: Transform {
+                        translation: attachment.transform.mul_vec3(Vec3::new(1., 1., 99.)),
+                        scale: size / 10.,
+                        ..Default::default()
+                    },
+                    texture_atlas: atlas.clone(),
+                    ..Default::default()
+                },
+                interactable: Interactable {
+                    groups: vec![Group(1)],
+                    bounding_box: (-size.truncate() * 5., size.truncate() * 5.),
+                },
+                apm: AttachmentPointMarker::new(*id),
+                aid: id.clone(),
             })
-            .id()
+            .collect()
     }
 
-    fn with_rigid_body(
-        &self,
-        commands: &mut Commands,
-        entity: Entity,
-        transform: Transform,
-    ) -> Entity {
-        log::info!("\t - with rigid body");
-        commands
-            .entity(entity)
-            .insert_bundle(RigidBodyBundle {
-                position: (transform.translation / 20.).into(),
+    fn rigid_body(&self) -> RigidBodyComponents {
+        RigidBodyComponents {
+            rigid_body: RigidBodyBundle {
+                position: (self.transform.translation / PHYSICS_SCALE).into(),
                 damping: RigidBodyDamping {
                     linear_damping: 100.0,
                     angular_damping: 100.0,
                 },
                 ..Default::default()
-            })
-            .insert(RigidBodyPositionSync::Discrete)
-            .id()
+            },
+            pos_sync: RigidBodyPositionSync::Discrete,
+        }
     }
 
-    fn with_driver(&self, commands: &mut Commands, entity: Entity) -> Entity {
-        log::info!("\t - with driver");
-        commands
-            .entity(entity)
-            .insert(Drivable {
-                angular_damping: 5.0,
-                linear_damping: 3.0,
-                linear_speed: 2000.0,
-                angular_speed: 1000.0,
-            })
-            .id()
+    fn controller(&self) -> Drivable {
+        Drivable {
+            angular_damping: 5.0,
+            linear_damping: 3.0,
+            linear_speed: 2000.0,
+            angular_speed: 1000.0,
+        }
     }
 }

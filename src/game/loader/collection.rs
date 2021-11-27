@@ -7,8 +7,8 @@ pub struct ItemCollection {
     #[asset(path = "items/simple_body.it")]
     pub simple_body: Handle<Item>,
 
-    #[asset(path = "items/simple_tracks.it")]
-    pub simple_tracks: Handle<Item>,
+    #[asset(path = "items/simple_track.it")]
+    pub simple_track: Handle<Item>,
 
     #[asset(path = "items/camera_hd.it")]
     pub camera_hd: Handle<Item>,

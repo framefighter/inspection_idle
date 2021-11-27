@@ -1,16 +1,12 @@
 use bevy::{log, prelude::*};
-use bevy_egui::EguiContext;
 use bevy_inspector_egui::Inspectable;
 use bevy_prototype_debug_lines::DebugLines;
-use bevy_rapier2d::{prelude::*, rapier::parry::simba::simd::SimdSigned};
+use bevy_rapier2d::prelude::*;
 use itertools::Itertools;
 
-#[derive(Default, Inspectable)]
-pub struct TerrainCollider {
-    vertices: Vec<Vec2>,
-}
+use crate::game::types::terrain::TerrainCollider;
 
-pub fn spawn_terrain(mut commands: Commands) {
+pub fn spawn(mut commands: Commands) {
     // eprintln!("spawn_terrain");
     // commands
     //     .spawn_bundle(RigidBodyBundle {
@@ -24,7 +20,7 @@ pub fn spawn_terrain(mut commands: Commands) {
     //     .insert(TerrainCollider::default());
 }
 
-pub fn build_terrain(
+pub fn build(
     query: Query<(&mut ColliderShape, &TerrainCollider), Changed<TerrainCollider>>,
     mut lines: ResMut<DebugLines>,
     rapier_config: Res<RapierConfiguration>,
@@ -48,7 +44,7 @@ pub fn build_terrain(
     });
 }
 
-pub fn update_terrain(
+pub fn update(
     query: Query<&mut TerrainCollider>,
     mouse_button_input: Res<Input<MouseButton>>,
     windows: Res<Windows>,
