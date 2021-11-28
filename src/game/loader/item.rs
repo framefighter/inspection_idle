@@ -103,17 +103,6 @@ impl AttachmentPointMarker {
         }
     }
 }
-#[derive(Debug, Inspectable, Default)]
-
-pub struct Drivable {
-    pub linear_speed: f32,
-    pub angular_speed: f32,
-
-    pub linear_damping: f32,
-    pub angular_damping: f32,
-}
-
-pub struct Selected(pub bool);
 
 #[derive(Debug, Inspectable, Default)]
 pub struct EmptyMarker;

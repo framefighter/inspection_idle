@@ -1,6 +1,6 @@
 use crate::dev::debug;
 use crate::game::loader::item::{Attachments};
-use crate::Drivable;
+use crate::Motors;
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
 use bevy_rapier2d::prelude::*;
@@ -11,7 +11,7 @@ pub fn reduce_sideways_vel(
     _rapier_parameters: Res<RapierConfiguration>,
     mut player_info: Query<
         (
-            &Drivable,
+            &Motors,
             &mut RigidBodyForces,
             &mut RigidBodyVelocity,
             &RigidBodyPosition,
@@ -38,7 +38,7 @@ pub fn reduce_sideways_vel(
     }
 }
 
-pub fn adjust_damping(damping: Query<(&Drivable, &mut RigidBodyDamping), Changed<Drivable>>) {
+pub fn adjust_damping(damping: Query<(&Motors, &mut RigidBodyDamping), Changed<Motors>>) {
     damping.for_each_mut(|(driver, mut rb_damping)| {
         rb_damping.linear_damping = driver.linear_damping;
         rb_damping.angular_damping = driver.angular_damping;

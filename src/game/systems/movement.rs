@@ -1,4 +1,4 @@
-use crate::Drivable;
+use crate::Motors;
 use bevy::prelude::*;
 
 use bevy_rapier2d::prelude::*;
@@ -6,7 +6,7 @@ use bevy_rapier2d::prelude::*;
 pub fn drive_robot(
     keyboard_input: Res<Input<KeyCode>>,
     rapier_parameters: Res<RapierConfiguration>,
-    drivable_query: Query<(Entity, &Drivable, &mut RigidBodyForces, &Transform)>,
+    drivable_query: Query<(Entity, &Motors, &mut RigidBodyForces, &Transform)>,
     // parent_query: Query<(&Parent, &Transform)>,
 ) {
     drivable_query.for_each_mut(|(drivable_entity, drive, mut forces, transform)| {

@@ -289,8 +289,8 @@ impl<'w> RobotSpawner<'w> {
         }
     }
 
-    fn controller(&self) -> Drivable {
-        Drivable {
+    fn controller(&self) -> Motors {
+        Motors {
             angular_damping: 5.0,
             linear_damping: 3.0,
             linear_speed: 2000.0,

@@ -7,11 +7,7 @@ use bevy_rapier2d::{
     prelude::*,
 };
 
-use crate::{
-    dev::debug,
-    game::{loader::sprite_asset::SpriteAsset, types::animations::AnimationDirection},
-    PHYSICS_SCALE,
-};
+use crate::{PHYSICS_SCALE, dev::debug, game::{loader::{item::Motors, sprite_asset::SpriteAsset}, types::animations::AnimationDirection}};
 
 pub fn animate_velocity(
     mut query: Query<
@@ -22,7 +18,7 @@ pub fn animate_velocity(
             &mut Timer,
             &mut AnimationDirection,
         ),
-        Changed<RigidBodyPosition>,
+        (Changed<RigidBodyPosition>, With<Motors>),
     >,
     mut lines: ResMut<DebugLines>,
 ) {
@@ -33,9 +29,7 @@ pub fn animate_velocity(
         let sign = rb_vel.linvel.dot(&orth.into());
 
         let delta_frames = sign.signum() * rb_vel.linvel.magnitude() / PHYSICS_SCALE;
-
-        debug::relative_line(&mut lines, transform, orth);
-
+ 
         *direction = if sign.signum() < 0.0 {
             AnimationDirection::Backward
         } else {

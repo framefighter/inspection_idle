@@ -26,7 +26,7 @@ impl Plugin for InspectAllPlugin {
         registry.register::<WantToAttach>();
         registry.register::<AttachmentPointMarker>();
         registry.register::<ItemName>();
-        registry.register::<Drivable>();
+        registry.register::<Motors>();
         registry.register::<TerrainCollider>();
         registry.register::<CustomFilterTag>();
     }
