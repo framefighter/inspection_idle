@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::game::loader::{collection::ItemCollection, information::InformationCollection};
+use crate::game::{loader::{collection::ItemCollection}, resources};
 
 pub fn startup(
     mut commands: Commands,
     mut map_query: MapQuery,
-    information_collection: Res<InformationCollection>,
+    information_collection: Res<resources::InformationCollection>,
     item_collection: Res<ItemCollection>,
 ) {
     let information = information_collection

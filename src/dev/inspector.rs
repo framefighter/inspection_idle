@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::*;
 
-use crate::game::{
+use crate::{CustomFilterTag, game::{
     loader::{item::*, sprite_asset::SpriteAsset},
     types::terrain::TerrainCollider,
-};
+}};
 
 pub struct InspectAllPlugin;
 
@@ -28,5 +28,6 @@ impl Plugin for InspectAllPlugin {
         registry.register::<ItemName>();
         registry.register::<Drivable>();
         registry.register::<TerrainCollider>();
+        registry.register::<CustomFilterTag>();
     }
 }

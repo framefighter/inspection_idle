@@ -2,22 +2,21 @@ use crate::game::systems::*;
 
 use bevy::log;
 
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy_asset_ron::RonAssetPlugin;
 use bevy_ecs_tilemap::TilemapPlugin;
-use bevy_egui::{EguiPlugin};
-use bevy_interact_2d::{
-    InteractionDebugPlugin,
-};
+use bevy_egui::EguiPlugin;
+use bevy_inspector_egui::Inspectable;
+use bevy_interact_2d::InteractionDebugPlugin;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier2d::prelude::*;
 
-
 use game::loader::collection::ItemCollection;
-use game::loader::information::InformationCollection;
+use game::loader::item::Item;
 use game::loader::item::*;
-use game::loader::item::{Item};
 use game::loader::sprite_asset::SpriteAsset;
+use game::resources;
+use game::resources::*;
 use game::types::ui::*;
 use std::fmt::Debug;
 
@@ -28,8 +27,6 @@ mod utils;
 use bevy_asset_loader::AssetLoader;
 use dev::inspector::InspectAllPlugin;
 
-
-
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum GameState {
     AssetLoading,
@@ -37,22 +34,56 @@ pub enum GameState {
     Game,
 }
 
+#[derive(PartialEq, Eq, Clone, Inspectable, Debug, Copy)]
+pub enum CustomFilterTag {
+    WaitForAttach,
+    None,
+    Robot(u32),
+}
+
+impl Default for CustomFilterTag {
+    fn default() -> Self {
+        CustomFilterTag::None
+    }
+}
+
+struct SameUserDataFilter;
+impl<'a> PhysicsHooksWithQuery<&'a CustomFilterTag> for SameUserDataFilter {
+    fn filter_contact_pair(
+        &self,
+        context: &PairFilterContext<RigidBodyComponentsSet, ColliderComponentsSet>,
+        tags: &Query<&'a CustomFilterTag>,
+    ) -> Option<SolverFlags> {
+        match (
+            tags.get(context.collider1.entity()),
+            tags.get(context.collider2.entity()),
+        ) {
+            (Ok(CustomFilterTag::WaitForAttach), ..) | (.., Ok(CustomFilterTag::WaitForAttach)) => {
+                None
+            }
+            (Ok(a), Ok(b)) if a == b => None,
+            _ => Some(SolverFlags::default()),
+        }
+    }
+}
+
 pub const PHYSICS_SCALE: f32 = 20.0;
 
 fn main() {
     let mut app = App::build();
-
+    let hooks = SameUserDataFilter {};
     app.add_state(GameState::AssetLoading)
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .insert_resource(Msaa { samples: 8 })
-        .init_resource::<InformationCollection>()
-        .init_resource::<UiState>()
+        .init_resource::<resources::InformationCollection>()
+        .init_resource::<resources::UiState>()
+        .insert_resource(PhysicsHooksWithQueryObject(Box::new(hooks)))
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
         .add_plugin(InspectAllPlugin)
         .add_plugin(TilemapPlugin)
         .add_plugin(InteractionDebugPlugin)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RapierPhysicsPlugin::<&CustomFilterTag>::default())
         .add_plugin(RapierRenderPlugin)
         .add_plugin(RonAssetPlugin::<Item>::new(&["it"]))
         .add_plugin(DebugLinesPlugin);
@@ -88,13 +119,13 @@ fn main() {
             .with_system(display_events.system())
             .with_system(physics::adjust_damping.system())
             .with_system(physics::reduce_sideways_vel.system())
+            .with_system(animations::animate_velocity.system())
+            .with_system(animations::animate_sprite.system())
             .with_system(terrain::build.system())
             .with_system(terrain::update.system()),
     )
     .run();
 }
-
-
 
 fn display_events(
     mut intersection_events: EventReader<IntersectionEvent>,

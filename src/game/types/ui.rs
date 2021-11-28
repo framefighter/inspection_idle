@@ -3,14 +3,6 @@ use bevy_inspector_egui::Inspectable;
 
 use crate::game::loader::item::{AttachmentPointId};
 
-
-
-#[derive(Default, Inspectable, Clone)]
-pub struct UiState {
-    pub show_attachment_menu: Option<UiAttachmentMenu>,
-    pub show_attachment_points: bool,
-}
-
 #[derive(Default, Inspectable, Clone)]
 pub struct UiAttachmentMenu {
     pub item_to_attach_to: UiAttachmentItem,

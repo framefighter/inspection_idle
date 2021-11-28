@@ -1,7 +1,18 @@
 use bevy::{log, prelude::*};
 use bevy_rapier2d::{na::Vector2, physics::RapierConfiguration};
 
-use crate::{GameState, PHYSICS_SCALE, game::{item_builder::RobotSpawner, loader::{collection::ItemCollection, information::{Information, InformationCollection}, item::{AttachmentPointId, Item}}}};
+use crate::{
+    game::{
+        item_builder::RobotSpawner,
+        loader::{
+            collection::ItemCollection,
+            information::Information,
+            item::{AttachmentPointId, Item},
+        },
+        resources,
+    },
+    GameState, PHYSICS_SCALE,
+};
 
 pub fn fill_information(
     asset_server: Res<AssetServer>,
@@ -9,7 +20,7 @@ pub fn fill_information(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     items: Res<Assets<Item>>,
-    mut information_collection: ResMut<InformationCollection>,
+    mut information_collection: ResMut<resources::InformationCollection>,
     mut app_state: ResMut<State<GameState>>,
 ) {
     for (i, value) in item_collection.iter_fields().enumerate() {
@@ -45,7 +56,7 @@ pub fn fill_information(
 
 pub fn spawn_entities(
     mut commands: Commands,
-    information_collection: Res<InformationCollection>,
+    information_collection: Res<resources::InformationCollection>,
     item_collection: Res<ItemCollection>,
     items: Res<Assets<Item>>,
     mut rapier_config: ResMut<RapierConfiguration>,
@@ -70,15 +81,23 @@ pub fn spawn_entities(
             &item_collection.camera_hd,
             AttachmentPointId::LineFollowerCamera,
         )
-        .attach_then(
-            &item_collection.camera_zoom,
-            AttachmentPointId::MainCamera,
-            |zoom_camera| {
-                zoom_camera.attach(
-                    &item_collection.camera_hd,
-                    AttachmentPointId::LineFollowerCamera,
-                )
-            },
+        .attach(
+            &item_collection.simple_track,
+            AttachmentPointId::GroundPropulsionLeft,
         )
+        .attach(
+            &item_collection.simple_track,
+            AttachmentPointId::GroundPropulsionRight,
+        )
+        // .attach_then(
+        //     &item_collection.camera_zoom,
+        //     AttachmentPointId::MainCamera,
+        //     |zoom_camera| {
+        //         zoom_camera.attach(
+        //             &item_collection.camera_hd,
+        //             AttachmentPointId::LineFollowerCamera,
+        //         )
+        //     },
+        // )
         .build(&mut commands);
 }

@@ -1,3 +1,4 @@
+use crate::dev::debug;
 use crate::game::loader::item::{Attachments};
 use crate::Drivable;
 use bevy::prelude::*;
@@ -30,26 +31,9 @@ pub fn reduce_sideways_vel(
         let t = 0.5;
         let damped = res * t + rb_vel.linvel * (1. - t);
 
-        lines.line_colored(
-            trans.translation,
-            Vec3::new(
-                trans.translation.x + damped.x * 10.0,
-                trans.translation.y + damped.y * 10.0,
-                999.,
-            ),
-            0.0,
-            Color::RED,
-        );
-        lines.line_colored(
-            trans.translation,
-            Vec3::new(
-                trans.translation.x + dir.x * 30.0,
-                trans.translation.y + dir.y * 30.0,
-                999.,
-            ),
-            0.0,
-            Color::BLUE,
-        );
+        debug::relative_line(&mut lines, trans, Vec2::new(damped.x, damped.y));
+        debug::relative_line(&mut lines, trans, Vec2::new(dir.x, dir.y));
+        
         rb_vel.linvel = damped;
     }
 }

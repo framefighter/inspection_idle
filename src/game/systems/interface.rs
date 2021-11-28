@@ -1,14 +1,11 @@
-use crate::game::{loader::collection::ItemCollection, types::ui::UiState};
+use crate::game::{loader::collection::ItemCollection, resources};
 use bevy::{log, prelude::*};
 use bevy_egui::{
     egui::{self, Color32, FontDefinitions, FontFamily},
     EguiContext, EguiSettings,
 };
 
-use crate::game::{
-    item_builder::RobotSpawner,
-    loader::{information::InformationCollection, item::*},
-};
+use crate::game::{item_builder::RobotSpawner, loader::item::*};
 
 pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
@@ -56,12 +53,12 @@ pub fn update_ui_scale_factor(
 }
 
 pub fn robot_config_ui(
-    mut query_p: Query<&mut Attachments>,
+    mut query_p: Query<(&mut Attachments, &Transform)>,
     items: Res<Assets<Item>>,
-    mut ui_state: ResMut<UiState>,
+    mut ui_state: ResMut<resources::UiState>,
     mut commands: Commands,
     egui_ctx: ResMut<EguiContext>,
-    information_collection: Res<InformationCollection>,
+    information_collection: Res<resources::InformationCollection>,
     item_collection: Res<ItemCollection>,
 ) {
     egui::Window::new("Menu")
@@ -87,8 +84,8 @@ pub fn robot_config_ui(
                     let mut spawner =
                         RobotSpawner::init(&items, &information_collection, &item_collection);
                     ui.separator();
-                    if let Some(e) = attachment_menu.item_to_attach_to.entity {
-                        if let Ok(ref mut attachments) = query_p.get_mut(e) {
+                    if let Some(entity) = attachment_menu.item_to_attach_to.entity {
+                        if let Ok((ref mut attachments, transform)) = query_p.get_mut(entity) {
                             if let Some(ad) = attachments
                                 .0
                                 .get_mut(&attachment_menu.item_to_attach_to.attachment_point_id)
@@ -116,7 +113,7 @@ pub fn robot_config_ui(
                                             .join(",\n\t")
                                     ),
                                 );
-                                if let Some(attached_entity) = ad.attached {
+                                if let Some((attached_entity, joint_entity)) = ad.attached {
                                     if ui
                                         .add(
                                             egui::Button::new("❌ Remove")
@@ -129,6 +126,7 @@ pub fn robot_config_ui(
                                         ui_state.show_attachment_menu =
                                             ui_state.show_attachment_menu.clone();
                                         commands.entity(attached_entity).despawn_recursive();
+                                        commands.entity(joint_entity).despawn_recursive();
                                     }
                                 }
                                 ui.indent("h", |ui| {
@@ -141,10 +139,15 @@ pub fn robot_config_ui(
                                             {
                                                 ui_state.show_attachment_menu =
                                                     ui_state.show_attachment_menu.clone();
-                                                if let Some(attached_entity) = ad.attached {
+                                                if let Some((attached_entity, joint_entity)) =
+                                                    ad.attached
+                                                {
                                                     ad.attached = None;
                                                     commands
                                                         .entity(attached_entity)
+                                                        .despawn_recursive();
+                                                    commands
+                                                        .entity(joint_entity)
                                                         .despawn_recursive();
                                                 }
                                                 log::info!(
@@ -154,7 +157,12 @@ pub fn robot_config_ui(
                                                 );
                                                 spawner
                                                     .new()
-                                                    .attachment(&handle, ad.id, e, ad.transform)
+                                                    .attachment(
+                                                        &handle,
+                                                        ad.id,
+                                                        entity,
+                                                        transform.mul_transform(ad.transform),
+                                                    )
                                                     .build(&mut commands);
                                             }
                                         }

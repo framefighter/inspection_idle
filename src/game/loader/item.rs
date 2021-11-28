@@ -1,14 +1,7 @@
-use crate::PHYSICS_SCALE;
+use crate::{CustomFilterTag, PHYSICS_SCALE, game::types::animations::AnimationBundle};
 
-use super::{
-    information::{Information},
-    sprite_asset::SpriteAsset,
-};
-use bevy::{
-    log,
-    prelude::*,
-    reflect::{TypeUuid},
-};
+use super::{information::Information, sprite_asset::SpriteAsset};
+use bevy::{log, prelude::*, reflect::TypeUuid};
 
 use bevy_inspector_egui::Inspectable;
 use bevy_interact_2d::{Group, Interactable};
@@ -39,18 +32,18 @@ impl ItemSize {
     }
 }
 
-#[derive(Debug, Clone, Inspectable, Default)]
+#[derive(Clone, Inspectable, Default)]
 pub struct Attachment {
     pub id: AttachmentPointId,
     pub max_size: ItemSize,
     pub transform: Transform,
     pub accepted_types: Vec<ItemType>,
-    pub attached: Option<Entity>,
+    pub attached: Option<(Entity, Entity)>,
 }
 
 impl Attachment {
-    pub fn attach(&mut self, item: Entity) {
-        self.attached = Some(item);
+    pub fn attach(&mut self, item: Entity, joint: Entity) {
+        self.attached = Some((item, joint));
     }
 
     pub fn is_compatible(&self, item_size: &ItemSize, item_type: &ItemType) -> bool {
@@ -65,7 +58,31 @@ impl Attachment {
 pub type Attachments = AttachmentMap<Attachment>;
 
 #[derive(Debug, Inspectable)]
-pub struct WantToAttach(pub AttachmentPointId);
+pub enum WantToAttach {
+    Me,
+    To {
+        parent: Option<Entity>,
+        aid: AttachmentPointId,
+    },
+}
+
+#[derive(Debug, Inspectable)]
+pub struct WantToAttachTo {
+    pub parent: Entity,
+    pub aid: AttachmentPointId,
+}
+
+impl WantToAttach {
+    pub fn to(parent: Entity, aid: AttachmentPointId) -> Self {
+        Self::To {
+            parent: Some(parent),
+            aid,
+        }
+    }
+    pub fn me() -> Self {
+        Self::Me
+    }
+}
 
 #[derive(Debug, Inspectable)]
 pub struct ItemName(pub String);
@@ -112,6 +129,8 @@ pub struct ItemBundle {
     pub attachments: Attachments,
     pub item_name: ItemName,
     #[bundle]
+    pub animation_bundle: AnimationBundle,
+    #[bundle]
     pub collider: ColliderBundle,
 }
 
@@ -138,6 +157,7 @@ impl Item {
             item_type: self.item_type.clone(),
             item_size: ItemSize(self.size),
             sprite_asset: self.sprite.clone(),
+            animation_bundle: AnimationBundle::new(0.3),
             attachments: AttachmentMap(
                 self.attachment_points
                     .0
@@ -166,14 +186,13 @@ impl Item {
             ),
             item_name: ItemName(information.name.clone()),
             collider: ColliderBundle {
-                // position: (transform.translation / PHYSICS_SCALE).into(),
+                flags: ActiveHooks::FILTER_CONTACT_PAIRS.into(),
                 shape: ColliderShape::cuboid(
                     self.sprite.size.0 / (2. * PHYSICS_SCALE),
                     self.sprite.size.1 / (2. * PHYSICS_SCALE),
                 ),
                 ..Default::default()
             },
-
         }
     }
 }

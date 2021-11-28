@@ -1,8 +1,5 @@
-use super::loader::{
-    information::{InformationCollection},
-    item::*,
-};
-use crate::{game::loader::collection::ItemCollection, PHYSICS_SCALE};
+use super::{loader::item::*, resources};
+use crate::{game::loader::collection::ItemCollection, CustomFilterTag, PHYSICS_SCALE};
 use bevy::{log, prelude::*};
 use bevy_interact_2d::{Group, Interactable};
 use bevy_rapier2d::prelude::*;
@@ -28,7 +25,6 @@ pub struct SpawnItem {
     children: Vec<SpawnItem>,
     handle: Handle<Item>,
     ap: Option<AttachmentPointId>,
-    root: bool,
 }
 
 impl SpawnItem {
@@ -37,7 +33,6 @@ impl SpawnItem {
             children: vec![],
             handle,
             ap: None,
-            root: true,
         }
     }
 
@@ -46,7 +41,6 @@ impl SpawnItem {
             children: vec![],
             handle,
             ap: Some(ap),
-            root: false,
         }
     }
 
@@ -57,7 +51,7 @@ impl SpawnItem {
 
 pub struct RobotSpawner<'w> {
     pub items: &'w Assets<Item>,
-    pub information_collection: &'w InformationCollection,
+    pub information_collection: &'w resources::InformationCollection,
     pub item_collection: &'w ItemCollection,
 
     selected: bool,
@@ -69,7 +63,7 @@ pub struct RobotSpawner<'w> {
 impl<'w> RobotSpawner<'w> {
     pub fn init(
         items: &'w Assets<Item>,
-        information_collection: &'w InformationCollection,
+        information_collection: &'w resources::InformationCollection,
         item_collection: &'w ItemCollection,
     ) -> Self {
         Self {
@@ -181,52 +175,53 @@ impl<'w> RobotSpawner<'w> {
                             })
                         })
                         .id();
-
                     if item.item_type == ItemType::Robot(RobotItemType::GroundPropulsion) {
                         commands.entity(parent).insert(self.controller());
                     }
                     if self.selected {
                         commands.entity(parent).insert(Selected(true));
                     }
-                    if let Some(aid) = spawn_item.ap {
-                        commands.entity(parent).insert(WantToAttach(aid));
-                    }
+                    // if let Some(aid) = spawn_item.ap {
+                    //     commands.entity(parent).insert(WantToAttach(aid));
+                    // }
                     if let Some((super_parent, aid)) = &self.super_parent {
-                        commands.entity(*super_parent).push_children(&[parent]);
-                        commands.entity(parent).insert(WantToAttach(*aid));
-                    } else if spawn_item.root {
-                        log::info!("RobotSpawner: ROOT Robot spawned");
-                        commands.entity(parent).insert_bundle(self.rigid_body());
+                        // commands.entity(*super_parent).push_children(&[parent]);
+                        commands
+                            .entity(parent)
+                            .insert(WantToAttach::to(*super_parent, *aid));
+                    } else {
+                        commands.entity(parent).insert(WantToAttach::me());
                     }
-                    let children: Vec<Entity> = spawn_item
-                        .children
-                        .iter()
-                        .map(|child| {
-                            let transform = child
-                                .ap
-                                .map(|ap| {
-                                    if let Some(at) = ats.get(&ap) {
-                                        log::info!("Found transform for attachment");
-                                        at.transform
-                                    } else {
-                                        Transform::default()
-                                    }
-                                })
-                                .unwrap_or_default();
-                            let child_spawner = &mut Self {
-                                items: self.items,
-                                information_collection: self.information_collection,
-                                item_collection: self.item_collection,
-                                selected: false,
-                                super_parent: None,
-                                spawn_item: Some(child.clone()),
-                                transform,
-                            };
-                            child_spawner.build(commands)
-                        })
-                        .collect();
 
-                    commands.entity(parent).push_children(&children).id()
+                    commands
+                        .entity(parent)
+                        .insert_bundle(self.rigid_body())
+                        .insert(CustomFilterTag::WaitForAttach);
+
+                    spawn_item.children.iter().for_each(|child| {
+                        let transform = child
+                            .ap
+                            .map(|ap| {
+                                if let Some(at) = ats.get(&ap) {
+                                    log::info!("Found transform for attachment");
+                                    at.transform
+                                } else {
+                                    Transform::default()
+                                }
+                            })
+                            .unwrap_or_default();
+                        let child_spawner = &mut Self {
+                            items: self.items,
+                            information_collection: self.information_collection,
+                            item_collection: self.item_collection,
+                            selected: false,
+                            super_parent: Some((parent, child.ap.unwrap())),
+                            spawn_item: Some(child.clone()),
+                            transform,
+                        };
+                        child_spawner.build(commands);
+                    });
+                    parent
                 } else {
                     log::warn!(
                         "RobotSpawner: build() can not find information for handle: {:?}",
