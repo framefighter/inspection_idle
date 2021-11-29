@@ -1,4 +1,5 @@
 use crate::game::systems::*;
+extern crate num_traits;
 
 use bevy::log;
 
@@ -11,6 +12,7 @@ use bevy_interact_2d::InteractionDebugPlugin;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier2d::prelude::*;
 use game::components::collision_filter::*;
+use game::components::robot::ParentEntity;
 use game::resources::item_collection::*;
 use game::resources::item_information::*;
 use game::resources::ui::*;
@@ -20,6 +22,7 @@ use std::fmt::Debug;
 mod dev;
 mod game;
 mod consts;
+mod utils;
 
 use bevy_asset_loader::AssetLoader;
 use dev::inspector::InspectAllPlugin;
@@ -34,7 +37,7 @@ pub enum GameState {
 
 fn main() {
     let mut app = App::build();
-    let hooks = SameUserDataFilter {};
+    let hooks = RapierUserData {};
     app.add_state(GameState::AssetLoading)
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .insert_resource(Msaa { samples: 8 })
@@ -46,7 +49,7 @@ fn main() {
         .add_plugin(InspectAllPlugin)
         .add_plugin(TilemapPlugin)
         .add_plugin(InteractionDebugPlugin)
-        .add_plugin(RapierPhysicsPlugin::<&CollisionFilter>::default())
+        .add_plugin(RapierPhysicsPlugin::<&ParentEntity>::default())
         .add_plugin(RapierRenderPlugin)
         .add_plugin(RonAssetPlugin::<LoadedItem>::new(&["it"]))
         .add_plugin(DebugLinesPlugin);
@@ -78,14 +81,20 @@ fn main() {
             .with_system(interaction_marker::show_marker.system())
             .with_system(interaction_marker::select_marker.system())
             .with_system(movement::drive_robot.system())
+            .with_system(movement::move_joint.system())
             .with_system(physics::spawn_joints.system())
-            .with_system(display_events.system())
             .with_system(physics::adjust_damping.system())
             .with_system(physics::reduce_sideways_vel.system())
-            .with_system(animations::animate_velocity.system())
-            .with_system(animations::animate_sprite.system())
+            .with_system(input::zoom_cameras.system())
+            .with_system(animations::motors.system())
+            .with_system(animations::cameras.system())
+            .with_system(animations::sprite.system())
+            .with_system(animations::battery.system())
             .with_system(terrain::build.system())
-            .with_system(terrain::update.system()),
+            .with_system(terrain::update.system())
+            .with_system(energy::update_consumption.system())
+            .with_system(energy::update_battery.system())
+            .with_system(display_events.system()),
     )
     .run();
 }

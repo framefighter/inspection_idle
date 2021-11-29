@@ -2,7 +2,16 @@ use bevy::{log, prelude::*};
 use bevy_interact_2d::{Group, Interactable};
 use bevy_rapier2d::prelude::*;
 
-use crate::{consts::PHYSICS_SCALE, game::{bundles::{interaction_marker::InteractionMarkerBundle, item::ItemBundle, physics::PhysicsBundle}, components::{collision_filter::CollisionFilter, robot::*}, resources::{item_collection::*, item_information::*}}};
+use crate::{
+    consts::PHYSICS_SCALE,
+    game::{
+        bundles::{
+            interaction_marker::InteractionMarkerBundle, item::ItemBundle, physics::PhysicsBundle,
+        },
+        components::robot::*,
+        resources::{item_collection::*, item_information::*},
+    },
+};
 
 #[derive(Clone)]
 pub struct SpawnItem {
@@ -159,9 +168,7 @@ impl<'w> RobotBuilder<'w> {
                             })
                         })
                         .id();
-                    if item.item_type == ItemType::Robot(RobotItemType::GroundPropulsion) {
-                        commands.entity(parent).insert(self.controller());
-                    }
+
                     if self.selected {
                         commands.entity(parent).insert(Selected(true));
                     }
@@ -177,10 +184,13 @@ impl<'w> RobotBuilder<'w> {
                         commands.entity(parent).insert(WantToAttach::me());
                     }
 
+                    Self::attach_additional_components(commands, item.item_type, parent);
+
                     commands
                         .entity(parent)
                         .insert_bundle(self.rigid_body())
-                        .insert(CollisionFilter::WaitForAttach);
+                        .insert(ParentEntity::WaitForAttach)
+                        .insert(EnergyConsumption { consumption: 0.0 });
 
                     spawn_item.children.iter().for_each(|child| {
                         let transform = child
@@ -226,7 +236,50 @@ impl<'w> RobotBuilder<'w> {
         }
     }
 
-    fn interaction_markers(&self, attachments: &Attachments) -> Vec<InteractionMarkerBundle> {
+    fn attach_additional_components(commands: &mut Commands, item_type: ItemType, parent: Entity) {
+        match item_type {
+            ItemType::Robot(RobotItemType::Body) => {
+                // TODO: support multiple batteries on one body
+                commands.entity(parent).insert(Battery {
+                    capacity: 10000.0,
+                    charge: 10000.0,
+                    charge_speed: 1.0,
+                });
+            }
+            ItemType::Robot(RobotItemType::GroundPropulsion) => {
+                commands.entity(parent).insert(Motors {
+                    angular_damping: 5.0,
+                    linear_damping: 3.0,
+                    linear_speed: 2000.0,
+                    angular_speed: 1000.0,
+                });
+            }
+            ItemType::Robot(RobotItemType::Camera) => {
+                commands
+                    .entity(parent)
+                    .insert(CameraZoom {
+                        zoom: 1.0,
+                        target: 1.0,
+                        range: 0.0..10.0,
+                        speed: 0.01,
+                    })
+                    .insert(ImageQuality {
+                        width: 1.0,
+                        height: 1.0,
+                        noise: 0.0,
+                    });
+            }
+            ItemType::Robot(RobotItemType::Battery) => {
+                commands.entity(parent).insert(BatterySprite);
+            }
+            _ => {}
+        }
+    }
+
+    fn interaction_markers(
+        &self,
+        attachments: &AttachmentMap<Attachment>,
+    ) -> Vec<InteractionMarkerBundle> {
         log::info!("\t - with interaction markers");
         let atlas = self
             .information_collection
@@ -270,15 +323,6 @@ impl<'w> RobotBuilder<'w> {
                 ..Default::default()
             },
             pos_sync: RigidBodyPositionSync::Discrete,
-        }
-    }
-
-    fn controller(&self) -> Motors {
-        Motors {
-            angular_damping: 5.0,
-            linear_damping: 3.0,
-            linear_speed: 2000.0,
-            angular_speed: 1000.0,
         }
     }
 }

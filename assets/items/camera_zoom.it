@@ -1,24 +1,6 @@
 (
     size: 2,
     item_type: Robot(Camera),
-    attachment_points: ({
-        MainCamera: (
-            position: (-8., -17., 2.),
-            rotation: 0.,
-            item_types: [
-                Robot(Camera),
-            ],
-            max_item_size: 2,
-        ),
-        LineFollowerCamera: (
-            position: (10., 17., 2.),
-            rotation: 0.,
-            item_types: [
-                Robot(Camera),
-            ],
-            max_item_size: 1,
-        ),
-    }),
     sprite: (
         size: (11., 14.),
         frames: 3,

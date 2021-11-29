@@ -78,15 +78,12 @@ pub fn spawn_entities(
             &item_collection.simple_track,
             AttachmentPointId::GroundPropulsionRight,
         )
-        // .attach_then(
-        //     &item_collection.camera_zoom,
-        //     AttachmentPointId::MainCamera,
-        //     |zoom_camera| {
-        //         zoom_camera.attach(
-        //             &item_collection.camera_hd,
-        //             AttachmentPointId::LineFollowerCamera,
-        //         )
-        //     },
-        // )
+        .attach_then(
+            &item_collection.camera_zoom,
+            AttachmentPointId::MainCamera,
+            |zoom_camera| {
+                zoom_camera
+            },
+        )
         .build(&mut commands);
 }

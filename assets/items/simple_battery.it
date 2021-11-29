@@ -1,0 +1,8 @@
+(
+    item_type: Robot(Battery),
+    size: 1,
+    sprite: (
+        size: (11., 13.),
+        frames: 4,
+    )
+)

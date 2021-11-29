@@ -1,5 +1,6 @@
 use bevy::{prelude::*, reflect::{Reflect, TypeUuid}};
 use bevy_asset_loader::AssetCollection;
+use bevy_inspector_egui::Inspectable;
 
 use crate::game::components::robot::*;
 
@@ -13,10 +14,15 @@ pub struct ItemCollection {
     #[asset(path = "items/simple_track.it")]
     pub simple_track: Handle<LoadedItem>,
 
+    #[asset(path = "items/sensor_mast_two.it")]
+    pub sensor_mast_two: Handle<LoadedItem>,
     #[asset(path = "items/camera_hd.it")]
     pub camera_hd: Handle<LoadedItem>,
     #[asset(path = "items/camera_zoom.it")]
     pub camera_zoom: Handle<LoadedItem>,
+
+    #[asset(path = "items/simple_battery.it")]
+    pub simple_battery: Handle<LoadedItem>,
 
     #[asset(path = "items/interaction_point.it")]
     pub interaction_point: Handle<LoadedItem>,
@@ -38,5 +44,17 @@ pub struct LoadedItem {
     pub item_type: ItemType,
     #[serde(default)]
     pub attachment_points: AttachmentMap<AttachmentPoint>,
+    #[serde(default)]
+    pub joint_type: JointType,
     pub sprite: SpriteAsset,
 }
+
+#[derive(serde::Deserialize, Debug, Clone, Default, Inspectable)]
+pub struct AttachmentPoint {
+    pub position: (f32, f32, f32),
+    pub rotation: f32,
+    pub item_types: Vec<ItemType>,
+    pub max_item_size: usize,
+    pub attached_item: Option<Entity>,
+}
+

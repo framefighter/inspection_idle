@@ -1,0 +1,27 @@
+(
+    size: 1,
+    item_type: Robot(Connector),
+    attachment_points: ({
+        FirstCamera: (
+            position: (-3., 0., 1.),
+            rotation: 0.,
+            item_types: [
+                Robot(Camera),
+            ],
+            max_item_size: 2,
+        ),
+        SecondCamera: (
+            position: (3., 0., 1.),
+            rotation: 0.,
+            item_types: [
+                Robot(Camera),
+            ],
+            max_item_size: 2,
+        ),
+    }),
+    sprite: (
+        size: (10., 6.),
+        frames: 1,
+    ),
+    joint_type: Ball,
+)

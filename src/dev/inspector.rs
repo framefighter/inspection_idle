@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::*;
 
 use crate::game::{
-    components::{collision_filter::CollisionFilter, robot::*},
+    components::robot::*,
     resources::{sprite_asset::SpriteAsset, terrain_collider::TerrainCollider},
 };
 
@@ -17,18 +17,23 @@ impl Plugin for InspectAllPlugin {
             .world_mut()
             .get_resource_or_insert_with(InspectableRegistry::default);
         registry.register::<SpriteAsset>();
-        registry.register::<AttachmentPoint>();
+        registry.register::<Attachment>();
         registry.register::<AttachmentPointId>();
         registry.register::<ItemType>();
         registry.register::<ItemSize>();
-        registry.register::<Attachments>();
+        registry.register::<AttachmentMap<Attachment>>();
         registry.register::<Attachment>();
         registry.register::<WantToAttach>();
         registry.register::<AttachmentPointMarker>();
         registry.register::<ItemName>();
         registry.register::<Motors>();
         registry.register::<TerrainCollider>();
-        registry.register::<CollisionFilter>();
+        registry.register::<ParentEntity>();
+        registry.register::<CameraZoom>();
+        registry.register::<ImageQuality>();
+        registry.register::<JointType>();
+        registry.register::<Battery>();
+        registry.register::<EnergyConsumption>();
     }
 }
 

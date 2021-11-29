@@ -7,6 +7,7 @@
         rotation: 0.,
         item_types: [
             Robot(Camera),
+            Robot(Connector),
         ],
         max_item_size: 2,
       ),
@@ -19,7 +20,7 @@
         max_item_size: 1,
       ),
       GroundPropulsionRight: (
-        position: (15., 0., 0.),
+        position: (15., 0., -1.),
         rotation: 0.,
         item_types: [
             Robot(GroundPropulsion),
@@ -27,10 +28,18 @@
         max_item_size: 1,
       ),
       GroundPropulsionLeft: (
-        position: (-15., 0., 0.),
+        position: (-15., 0., -1.),
         rotation: 0.,
         item_types: [
             Robot(GroundPropulsion),
+        ],
+        max_item_size: 1,
+      ),
+      MainBattery: (
+        position: (9., 0., 1.),
+        rotation: 0.,
+        item_types: [
+            Robot(Battery),
         ],
         max_item_size: 1,
       ),

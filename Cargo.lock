@@ -2156,6 +2156,7 @@ dependencies = [
  "getrandom",
  "itertools",
  "nanoid",
+ "num-traits",
  "rand",
  "serde",
 ]

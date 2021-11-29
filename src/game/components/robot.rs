@@ -1,10 +1,16 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Range};
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{ecs::component::Component, prelude::*, utils::HashMap};
 use bevy_inspector_egui::Inspectable;
+
+use crate::game::bundles::empty::EmptyBundle;
 
 use super::terrain::TerrainItemType;
 
+#[derive(Debug, Inspectable, Default)]
+pub struct EnergyConsumption {
+    pub consumption: f32,
+}
 
 #[derive(Debug, Inspectable, Default)]
 pub struct Motors {
@@ -16,17 +22,28 @@ pub struct Motors {
 
 #[derive(Debug, Inspectable, Default)]
 pub struct CameraZoom {
-    max_zoom: f32,
-    zoom_speed: f32,
-    zoom: f32,
+    pub range: Range<f32>,
+    pub speed: f32,
+    pub zoom: f32,
+    pub target: f32,
 }
 
 #[derive(Debug, Inspectable, Default)]
 pub struct ImageQuality {
-    width: f32,
-    height: f32,
-    noise: f32
+    pub width: f32,
+    pub height: f32,
+    pub noise: f32,
 }
+
+#[derive(Debug, Inspectable, Default)]
+pub struct Battery {
+    pub capacity: f32,
+    pub charge_speed: f32,
+    pub charge: f32,
+}
+
+#[derive(Debug, Inspectable, Default)]
+pub struct BatterySprite;
 
 #[derive(Debug, Inspectable, Default)]
 pub struct AttachmentPointMarker {
@@ -76,8 +93,6 @@ impl Attachment {
         self.attached.is_some()
     }
 }
-
-pub type Attachments = AttachmentMap<Attachment>;
 
 #[derive(Debug, Inspectable)]
 pub enum WantToAttach {
@@ -138,6 +153,8 @@ pub enum RobotItemType {
     Camera,
     Body,
     GroundPropulsion,
+    Connector,
+    Battery,
 }
 
 impl Default for RobotItemType {
@@ -153,6 +170,8 @@ impl Display for RobotItemType {
             Self::Camera => write!(f, "Camera"),
             Self::Body => write!(f, "Body"),
             Self::GroundPropulsion => write!(f, "Ground Propulsion"),
+            Self::Connector => write!(f, "Connector"),
+            Self::Battery => write!(f, "Battery"),
         }
     }
 }
@@ -160,17 +179,20 @@ impl Display for RobotItemType {
 #[derive(serde::Deserialize, Debug, Clone, Default)]
 pub struct AttachmentMap<T: Inspectable + Clone>(pub HashMap<AttachmentPointId, T>);
 
-
 #[derive(Debug, Inspectable, Default)]
 pub struct EmptyMarker;
 
-#[derive(serde::Deserialize, Debug, Clone, Default, Inspectable)]
-pub struct AttachmentPoint {
-    pub position: (f32, f32, f32),
-    pub rotation: f32,
-    pub item_types: Vec<ItemType>,
-    pub max_item_size: usize,
-    pub attached_item: Option<Entity>,
+#[derive(serde::Deserialize, Debug, Clone, Inspectable, PartialEq, Eq, Copy)]
+pub enum JointType {
+    Fixed,
+    Ball,
+    Prismatic,
+}
+
+impl Default for JointType {
+    fn default() -> Self {
+        Self::Fixed
+    }
 }
 
 #[derive(Debug, Clone, Inspectable)]
@@ -185,6 +207,9 @@ pub enum AttachmentPointId {
     GroundPropulsionRight,
     GroundPropulsionLeft,
     LineFollowerCamera,
+    FirstCamera,
+    SecondCamera,
+    MainBattery,
 }
 
 impl Default for AttachmentPointId {
@@ -200,6 +225,9 @@ impl Display for AttachmentPointId {
             Self::GroundPropulsionRight => write!(f, "Ground Propulsion Right"),
             Self::GroundPropulsionLeft => write!(f, "Ground Propulsion Left"),
             Self::LineFollowerCamera => write!(f, "Line Follower Camera"),
+            Self::FirstCamera => write!(f, "First Camera"),
+            Self::SecondCamera => write!(f, "Second Camera"),
+            Self::MainBattery => write!(f, "Main Battery"),
         }
     }
 }
@@ -207,3 +235,15 @@ impl Display for AttachmentPointId {
 #[derive(serde::Deserialize, Debug, Clone, Default, Inspectable)]
 pub struct Selected(pub bool);
 
+#[derive(PartialEq, Eq, Clone, Inspectable, Debug, Copy)]
+pub enum ParentEntity {
+    WaitForAttach,
+    None,
+    Robot(Option<Entity>),
+}
+
+impl Default for ParentEntity {
+    fn default() -> Self {
+        Self::None
+    }
+}

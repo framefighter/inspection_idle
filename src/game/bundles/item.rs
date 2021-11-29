@@ -22,8 +22,9 @@ pub struct ItemBundle {
     pub interactable: Interactable,
     pub item_type: ItemType,
     pub item_size: ItemSize,
+    pub joint_type: JointType,
     pub sprite_asset: SpriteAsset,
-    pub attachments: Attachments,
+    pub attachments: AttachmentMap<Attachment>,
     pub item_name: ItemName,
     #[bundle]
     pub animation_bundle: AnimationBundle,
@@ -48,6 +49,7 @@ impl ItemBundle {
             },
             item_type: item.item_type.clone(),
             item_size: ItemSize(item.size),
+            joint_type: item.joint_type,
             sprite_asset: item.sprite.clone(),
             animation_bundle: AnimationBundle::new(0.3),
             attachments: AttachmentMap(
@@ -82,6 +84,9 @@ impl ItemBundle {
                 shape: ColliderShape::cuboid(
                     item.sprite.size.0 / (2. * PHYSICS_SCALE),
                     item.sprite.size.1 / (2. * PHYSICS_SCALE),
+                ),
+                mass_properties: ColliderMassProps::Density(
+                    item.sprite.size.0 * item.sprite.size.1 / (20. * PHYSICS_SCALE),
                 ),
                 ..Default::default()
             },

@@ -1,18 +1,19 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 
 use bevy_rapier2d::prelude::*;
 
 use crate::{
     consts::PHYSICS_SCALE,
     game::{
-        components::{animation::AnimationDirection, robot::Motors},
+        components::{animation::AnimationDirection, robot::*},
         resources::sprite_asset::SpriteAsset,
     },
+    utils::{get_robot_body, map_range},
 };
 
-pub fn animate_velocity(
+pub fn motors(
     mut query: Query<
         (
             &RigidBodyVelocity,
@@ -36,7 +37,17 @@ pub fn animate_velocity(
     }
 }
 
-pub fn animate_sprite(
+pub fn cameras(
+    query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &CameraZoom), Changed<CameraZoom>>,
+) {
+    query.for_each_mut(|(mut texture, sprite, camera_zoom)| {
+        let max_frames = sprite.frames as f32;
+        let frame = map_range(&camera_zoom.range, &(0.0..max_frames), camera_zoom.zoom);
+        texture.index = (frame as u32).min(sprite.frames as u32 - 1);
+    });
+}
+
+pub fn sprite(
     mut query: Query<(
         &Timer,
         &AnimationDirection,
@@ -53,4 +64,19 @@ pub fn animate_sprite(
             }
         }
     }
+}
+
+pub fn battery(
+    battery_sprite_query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &ParentEntity), With<BatterySprite>>,
+    body_query: Query<&Battery>,
+) {
+    battery_sprite_query.for_each_mut(|(mut texture, sprite, parent_entity)| {
+        if let Some(parent) = get_robot_body(parent_entity) {
+            if let Ok(battery) = body_query.get(parent) {
+                let max_frames = sprite.frames as f32;
+                let frame = map_range(&(0.0..battery.capacity), &(0.0..max_frames), battery.charge);
+                texture.index = (frame as u32).min(sprite.frames as u32 - 1);
+            }
+        }
+    });
 }

@@ -1,6 +1,5 @@
 use crate::consts::PHYSICS_SCALE;
 use crate::dev::debug;
-use crate::game::components::collision_filter::CollisionFilter;
 use crate::game::components::robot::*;
 use bevy::{log, prelude::*};
 use bevy_prototype_debug_lines::*;
@@ -17,7 +16,7 @@ pub fn reduce_sideways_vel(
             &mut RigidBodyVelocity,
             &RigidBodyPosition,
             &Transform,
-            &Attachments,
+            &AttachmentMap<Attachment>,
         ),
         Changed<RigidBodyVelocity>,
     >,
@@ -34,7 +33,7 @@ pub fn reduce_sideways_vel(
 
         debug::relative_line(&mut lines, trans, Vec2::new(damped.x, damped.y));
         debug::relative_line(&mut lines, trans, Vec2::new(dir.x, dir.y));
-        
+
         rb_vel.linvel = damped;
     }
 }
@@ -48,13 +47,20 @@ pub fn adjust_damping(damping: Query<(&Motors, &mut RigidBodyDamping), Changed<M
 
 pub fn spawn_joints(
     mut commands: Commands,
-    query: Query<(Entity, &WantToAttach, &ItemSize, &ItemType)>,
-    mut tag_queries: QuerySet<(Query<&CollisionFilter>, Query<&mut CollisionFilter>)>,
-    mut query_p: Query<&mut Attachments>,
+    query: Query<(
+        Entity,
+        &WantToAttach,
+        &ItemSize,
+        &ItemType,
+        &JointType,
+        &mut Transform,
+    )>,
+    mut tag_queries: QuerySet<(Query<&ParentEntity>, Query<&mut ParentEntity>)>,
+    mut query_p: Query<&mut AttachmentMap<Attachment>>,
 ) {
     let mut parent_tags = vec![];
     query.for_each_mut(
-        |(entity, want_attach, item_size, item_type)| match want_attach {
+        |(entity, want_attach, item_size, item_type, joint_type, mut transform)| match want_attach {
             WantToAttach::To {
                 parent: Some(parent_entity),
                 aid,
@@ -63,18 +69,29 @@ pub fn spawn_joints(
                     if let Ok(parent_tag) = tag_queries.q0().get(*parent_entity) {
                         if let Some(at) = attachments.0.get_mut(&aid) {
                             if at.is_compatible(item_size, item_type)
-                                && parent_tag != &CollisionFilter::WaitForAttach
+                                && parent_tag != &ParentEntity::WaitForAttach
                             {
-                                log::info!("ATTACHED: {}", aid);
+                                log::info!("Spawned Joint: {}", aid);
                                 parent_tags.push((entity, Some(*parent_tag)));
 
-                                let joint = FixedJoint::new(
-                                    (at.transform.translation / PHYSICS_SCALE).into(),
-                                    Isometry::identity(),
-                                );
+                                let joint = if joint_type == &JointType::Ball {
+                                    let ball = BallJoint::new(
+                                        (at.transform.translation.truncate() / PHYSICS_SCALE)
+                                            .into(),
+                                        Vec2::default().into(),
+                                    );
+                                    JointParams::BallJoint(ball)
+                                } else {
+                                    JointParams::FixedJoint(FixedJoint::new(
+                                        (at.transform.translation / PHYSICS_SCALE).into(),
+                                        Isometry::identity(),
+                                    ))
+                                };
+
+                                transform.translation.z = at.transform.translation.z + 90.0;
 
                                 let joint_entity = commands
-                                    .spawn()
+                                    .entity(entity)
                                     .insert(JointBuilderComponent::new(
                                         joint,
                                         *parent_entity,
@@ -102,7 +119,7 @@ pub fn spawn_joints(
 
     parent_tags.iter().for_each(|(child_entity, parent_tag)| {
         if let Ok(mut child_tag) = tag_queries.q1_mut().get_mut(*child_entity) {
-            *child_tag = parent_tag.unwrap_or(CollisionFilter::Robot(child_entity.id()));
+            *child_tag = parent_tag.unwrap_or(ParentEntity::Robot(Some(*child_entity)));
             commands.entity(*child_entity).remove::<WantToAttach>();
         }
     });

@@ -1,7 +1,6 @@
 (
     size: 1,
     item_type: Robot(Camera),
-    attachment_points: ({}),
     sprite: (
         size: (11., 10.),
         frames: 1,

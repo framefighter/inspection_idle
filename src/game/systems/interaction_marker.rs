@@ -11,7 +11,7 @@ pub fn update_marker_color(
         (&Parent, &AttachmentPointMarker, &mut TextureAtlasSprite),
         Changed<AttachmentPointMarker>,
     >,
-    parent_q: Query<&Attachments>,
+    parent_q: Query<&AttachmentMap<Attachment>>,
 ) {
     eap_q.for_each_mut(|(parent, apm, mut texture)| {
         if let Ok(attachments) = parent_q.get(parent.0) {

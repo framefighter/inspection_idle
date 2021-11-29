@@ -55,7 +55,7 @@ pub fn update_ui_scale_factor(
 }
 
 pub fn robot_config_ui(
-    mut query_p: Query<(&mut Attachments, &Transform)>,
+    mut query_p: Query<(&mut AttachmentMap<Attachment>, &Transform)>,
     items: Res<Assets<LoadedItem>>,
     mut ui_state: ResMut<UiState>,
     mut commands: Commands,
