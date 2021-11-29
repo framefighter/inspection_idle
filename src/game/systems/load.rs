@@ -1,31 +1,20 @@
 use bevy::{log, prelude::*};
 use bevy_rapier2d::{na::Vector2, physics::RapierConfiguration};
 
-use crate::{
-    game::{
-        item_builder::RobotSpawner,
-        loader::{
-            collection::ItemCollection,
-            information::Information,
-            item::{AttachmentPointId, Item},
-        },
-        resources,
-    },
-    GameState, PHYSICS_SCALE,
-};
+use crate::{GameState, consts::PHYSICS_SCALE, game::{builders::robot::RobotBuilder, components::robot::AttachmentPointId, resources::{item_collection::*, item_information::*}}};
 
 pub fn fill_information(
     asset_server: Res<AssetServer>,
     item_collection: Res<ItemCollection>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    items: Res<Assets<Item>>,
-    mut information_collection: ResMut<resources::InformationCollection>,
+    items: Res<Assets<LoadedItem>>,
+    mut information_collection: ResMut<InformationCollection>,
     mut app_state: ResMut<State<GameState>>,
 ) {
     for (i, value) in item_collection.iter_fields().enumerate() {
         let field_name = item_collection.name_at(i).unwrap();
-        if let Some(value) = value.downcast_ref::<Handle<Item>>() {
+        if let Some(value) = value.downcast_ref::<Handle<LoadedItem>>() {
             let item = items.get(value.clone()).unwrap();
             let sprite_path = format!("sprites/{}.png", field_name);
             log::info!("LOADING: {}", field_name);
@@ -42,7 +31,7 @@ pub fn fill_information(
             let material_handle = materials.add(texture_handle.into());
             information_collection.add(
                 value.clone(),
-                Information::new(
+                ItemInformation::new(
                     texture_atlas_handle,
                     material_handle,
                     item.sprite,
@@ -56,12 +45,12 @@ pub fn fill_information(
 
 pub fn spawn_entities(
     mut commands: Commands,
-    information_collection: Res<resources::InformationCollection>,
+    information_collection: Res<InformationCollection>,
     item_collection: Res<ItemCollection>,
-    items: Res<Assets<Item>>,
+    items: Res<Assets<LoadedItem>>,
     mut rapier_config: ResMut<RapierConfiguration>,
 ) {
-    let mut spawner = RobotSpawner::init(&items, &information_collection, &item_collection);
+    let mut spawner = RobotBuilder::init(&items, &information_collection, &item_collection);
 
     rapier_config.gravity = Vector2::zeros();
     rapier_config.scale = PHYSICS_SCALE;

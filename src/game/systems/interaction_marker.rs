@@ -1,7 +1,10 @@
 use bevy::prelude::*;
-use bevy_interact_2d::{Group, Interactable, InteractionState};
+use bevy_interact_2d::*;
 
-use crate::game::{loader::item::*, resources, types::ui::{UiAttachmentItem, UiAttachmentMenu}};
+use crate::game::{
+    components::robot::*,
+    resources::ui::*,
+};
 
 pub fn update_marker_color(
     eap_q: Query<
@@ -33,7 +36,7 @@ pub fn update_marker_color(
 
 pub fn show_marker(
     mut eap_q: Query<(&mut AttachmentPointMarker, &mut Interactable, &mut Visible)>,
-    ui_state: ResMut<resources::UiState>,
+    ui_state: ResMut<UiState>,
 ) {
     if !ui_state.is_changed() {
         return;
@@ -54,7 +57,7 @@ pub fn select_marker(
     mouse_button_input: Res<Input<MouseButton>>,
     interaction_state: Res<InteractionState>,
     mut query: Query<(&Parent, &mut AttachmentPointMarker, &AttachmentPointId)>,
-    mut ui_state: ResMut<resources::UiState>,
+    mut ui_state: ResMut<UiState>,
 ) {
     if !mouse_button_input.just_released(MouseButton::Left) {
         return;

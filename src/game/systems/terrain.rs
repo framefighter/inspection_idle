@@ -4,7 +4,7 @@ use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier2d::prelude::*;
 use itertools::Itertools;
 
-use crate::game::types::terrain::TerrainCollider;
+use crate::game::resources::terrain_collider::TerrainCollider;
 
 pub fn spawn(_commands: Commands) {
     // eprintln!("spawn_terrain");

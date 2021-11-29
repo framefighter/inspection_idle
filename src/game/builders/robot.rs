@@ -1,34 +1,18 @@
-use super::{loader::item::*, resources};
-use crate::{game::loader::collection::ItemCollection, CustomFilterTag, PHYSICS_SCALE};
 use bevy::{log, prelude::*};
 use bevy_interact_2d::{Group, Interactable};
 use bevy_rapier2d::prelude::*;
 
-#[derive(Default, Bundle)]
-pub struct RigidBodyComponents {
-    #[bundle]
-    rigid_body: RigidBodyBundle,
-    pos_sync: RigidBodyPositionSync,
-}
-
-#[derive(Default, Bundle)]
-pub struct InteractionMarkerBundle {
-    #[bundle]
-    sprite: SpriteSheetBundle,
-    interactable: Interactable,
-    apm: AttachmentPointMarker,
-    aid: AttachmentPointId,
-}
+use crate::{consts::PHYSICS_SCALE, game::{bundles::{interaction_marker::InteractionMarkerBundle, item::ItemBundle, physics::PhysicsBundle}, components::{collision_filter::CollisionFilter, robot::*}, resources::{item_collection::*, item_information::*}}};
 
 #[derive(Clone)]
 pub struct SpawnItem {
     children: Vec<SpawnItem>,
-    handle: Handle<Item>,
+    handle: Handle<LoadedItem>,
     ap: Option<AttachmentPointId>,
 }
 
 impl SpawnItem {
-    pub fn root(handle: Handle<Item>) -> Self {
+    pub fn root(handle: Handle<LoadedItem>) -> Self {
         SpawnItem {
             children: vec![],
             handle,
@@ -36,7 +20,7 @@ impl SpawnItem {
         }
     }
 
-    pub fn child(handle: Handle<Item>, ap: AttachmentPointId) -> Self {
+    pub fn child(handle: Handle<LoadedItem>, ap: AttachmentPointId) -> Self {
         SpawnItem {
             children: vec![],
             handle,
@@ -49,9 +33,9 @@ impl SpawnItem {
     }
 }
 
-pub struct RobotSpawner<'w> {
-    pub items: &'w Assets<Item>,
-    pub information_collection: &'w resources::InformationCollection,
+pub struct RobotBuilder<'w> {
+    pub items: &'w Assets<LoadedItem>,
+    pub information_collection: &'w InformationCollection,
     pub item_collection: &'w ItemCollection,
 
     selected: bool,
@@ -60,10 +44,10 @@ pub struct RobotSpawner<'w> {
     spawn_item: Option<SpawnItem>,
 }
 
-impl<'w> RobotSpawner<'w> {
+impl<'w> RobotBuilder<'w> {
     pub fn init(
-        items: &'w Assets<Item>,
-        information_collection: &'w resources::InformationCollection,
+        items: &'w Assets<LoadedItem>,
+        information_collection: &'w InformationCollection,
         item_collection: &'w ItemCollection,
     ) -> Self {
         Self {
@@ -85,7 +69,7 @@ impl<'w> RobotSpawner<'w> {
         self
     }
 
-    pub fn robot(&mut self, handle: &Handle<Item>) -> &mut Self {
+    pub fn robot(&mut self, handle: &Handle<LoadedItem>) -> &mut Self {
         if self.spawn_item.is_none() {
             self.spawn_item = Some(SpawnItem::root(handle.clone()));
         } else {
@@ -96,7 +80,7 @@ impl<'w> RobotSpawner<'w> {
 
     pub fn attachment(
         &mut self,
-        handle: &Handle<Item>,
+        handle: &Handle<LoadedItem>,
         aid: AttachmentPointId,
         parent: Entity,
         transform: Transform,
@@ -118,7 +102,7 @@ impl<'w> RobotSpawner<'w> {
         self.transform = transform;
         self
     }
-    pub fn attach(&mut self, handle: &Handle<Item>, id: AttachmentPointId) -> &mut Self {
+    pub fn attach(&mut self, handle: &Handle<LoadedItem>, id: AttachmentPointId) -> &mut Self {
         if let Some(spawn_item) = &mut self.spawn_item {
             spawn_item.add_child(SpawnItem::child(handle.clone(), id));
         } else {
@@ -132,7 +116,7 @@ impl<'w> RobotSpawner<'w> {
     }
     pub fn attach_then(
         &mut self,
-        handle: &Handle<Item>,
+        handle: &Handle<LoadedItem>,
         id: AttachmentPointId,
         f: impl FnOnce(&mut Self) -> &mut Self,
     ) -> &mut Self {
@@ -164,7 +148,7 @@ impl<'w> RobotSpawner<'w> {
         if let Some(spawn_item) = &self.spawn_item {
             if let Some(item) = self.items.get(spawn_item.handle.clone()) {
                 if let Some(information) = self.information_collection.get(&spawn_item.handle) {
-                    let bundle = item.bundle(&information, self.transform);
+                    let bundle = ItemBundle::new(item, &information, self.transform);
                     let ats = bundle.attachments.0.clone();
                     let markers = self.interaction_markers(&bundle.attachments);
                     let parent = commands
@@ -196,7 +180,7 @@ impl<'w> RobotSpawner<'w> {
                     commands
                         .entity(parent)
                         .insert_bundle(self.rigid_body())
-                        .insert(CustomFilterTag::WaitForAttach);
+                        .insert(CollisionFilter::WaitForAttach);
 
                     spawn_item.children.iter().for_each(|child| {
                         let transform = child
@@ -275,8 +259,8 @@ impl<'w> RobotSpawner<'w> {
             .collect()
     }
 
-    fn rigid_body(&self) -> RigidBodyComponents {
-        RigidBodyComponents {
+    fn rigid_body(&self) -> PhysicsBundle {
+        PhysicsBundle {
             rigid_body: RigidBodyBundle {
                 position: (self.transform.translation / PHYSICS_SCALE).into(),
                 damping: RigidBodyDamping {

@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::*;
 
-use crate::{CustomFilterTag, game::{
-    loader::{item::*, sprite_asset::SpriteAsset},
-    types::terrain::TerrainCollider,
-}};
+use crate::game::{
+    components::{collision_filter::CollisionFilter, robot::*},
+    resources::{sprite_asset::SpriteAsset, terrain_collider::TerrainCollider},
+};
 
 pub struct InspectAllPlugin;
 
@@ -28,6 +28,34 @@ impl Plugin for InspectAllPlugin {
         registry.register::<ItemName>();
         registry.register::<Motors>();
         registry.register::<TerrainCollider>();
-        registry.register::<CustomFilterTag>();
+        registry.register::<CollisionFilter>();
     }
+}
+
+impl<T: Inspectable + Clone> Inspectable for AttachmentMap<T> {
+    type Attributes = <T as Inspectable>::Attributes;
+
+    fn ui(
+        &mut self,
+        ui: &mut bevy_inspector_egui::egui::Ui,
+        options: Self::Attributes,
+        context: &bevy_inspector_egui::Context,
+    ) -> bool {
+        let mut changed = false;
+        ui.vertical(|ui| {
+            let len = self.0.len();
+            for (i, (key, val)) in self.0.iter_mut().enumerate() {
+                ui.collapsing(format!("{:?}", key), |ui| {
+                    changed |= val.ui(ui, options.clone(), context);
+                });
+                if i != len - 1 {
+                    ui.separator();
+                }
+            }
+        });
+
+        changed
+    }
+
+    fn setup(_app: &mut AppBuilder) {}
 }

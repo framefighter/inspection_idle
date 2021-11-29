@@ -1,7 +1,8 @@
-use crate::Motors;
 use bevy::prelude::*;
 
 use bevy_rapier2d::prelude::*;
+
+use crate::game::components::robot::Motors;
 
 pub fn drive_robot(
     keyboard_input: Res<Input<KeyCode>>,

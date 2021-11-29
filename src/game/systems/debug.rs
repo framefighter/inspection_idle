@@ -1,7 +1,8 @@
 use bevy::{log, prelude::*};
 use bevy_rapier2d::prelude::ColliderPosition;
 
-use crate::game::loader::item::ItemName;
+use crate::game::components::robot::*;
+
 
 pub fn print(query: Query<(&mut ColliderPosition, &Transform, &ItemName)>) {
     query.for_each_mut(|(collider, transform, item_name)| {

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::game::components::animation::AnimationDirection;
+
 #[derive(Bundle)]
 pub struct AnimationBundle {
     timer: Timer,
@@ -12,17 +14,5 @@ impl AnimationBundle {
             timer: Timer::from_seconds(duration, true),
             direction: AnimationDirection::default(),
         }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum AnimationDirection {
-    Forward,
-    Backward,
-}
-
-impl Default for AnimationDirection {
-    fn default() -> Self {
-        AnimationDirection::Forward
     }
 }

@@ -1,11 +1,13 @@
-use crate::game::{loader::collection::ItemCollection, resources};
+use crate::game::{
+    builders::robot::RobotBuilder,
+    components::robot::*,
+    resources::{item_collection::*, item_information::InformationCollection, ui::UiState},
+};
 use bevy::{log, prelude::*};
 use bevy_egui::{
     egui::{self, Color32, FontDefinitions, FontFamily},
     EguiContext, EguiSettings,
 };
-
-use crate::game::{item_builder::RobotSpawner, loader::item::*};
 
 pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
@@ -54,11 +56,11 @@ pub fn update_ui_scale_factor(
 
 pub fn robot_config_ui(
     mut query_p: Query<(&mut Attachments, &Transform)>,
-    items: Res<Assets<Item>>,
-    mut ui_state: ResMut<resources::UiState>,
+    items: Res<Assets<LoadedItem>>,
+    mut ui_state: ResMut<UiState>,
     mut commands: Commands,
     egui_ctx: ResMut<EguiContext>,
-    information_collection: Res<resources::InformationCollection>,
+    information_collection: Res<InformationCollection>,
     item_collection: Res<ItemCollection>,
 ) {
     egui::Window::new("Menu")
@@ -82,7 +84,7 @@ pub fn robot_config_ui(
             if ui_state.show_attachment_points {
                 if let Some(attachment_menu) = &ui_state.show_attachment_menu {
                     let mut spawner =
-                        RobotSpawner::init(&items, &information_collection, &item_collection);
+                        RobotBuilder::init(&items, &information_collection, &item_collection);
                     ui.separator();
                     if let Some(entity) = attachment_menu.item_to_attach_to.entity {
                         if let Ok((ref mut attachments, transform)) = query_p.get_mut(entity) {
