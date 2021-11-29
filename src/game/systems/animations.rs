@@ -1,11 +1,8 @@
 use std::time::Duration;
 
-use bevy::{prelude::*};
+use bevy::prelude::*;
 
-use bevy_rapier2d::{
-    na::{ComplexField},
-    prelude::*,
-};
+use bevy_rapier2d::prelude::*;
 
 use crate::{
     consts::PHYSICS_SCALE,
