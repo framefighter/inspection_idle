@@ -10,7 +10,7 @@ pub fn drive_robot(
     drivable_query: Query<(Entity, &Motors, &mut RigidBodyForces, &Transform)>,
     // parent_query: Query<(&Parent, &Transform)>,
 ) {
-    drivable_query.for_each_mut(|(drivable_entity, drive, mut forces, transform)| {
+    drivable_query.for_each_mut(|(_drivable_entity, drive, mut forces, transform)| {
         // let (rigid_parent, _) = find_parent(drivable_entity, &parent_query, Transform::default());
         // if let Ok((mut forces, transform)) = rigid_body_query.get_mut(rigid_parent) {
         let mut dir = Vec3::new(0.0, 0.0, 0.0);

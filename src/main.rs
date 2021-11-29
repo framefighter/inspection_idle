@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_asset_ron::RonAssetPlugin;
 use bevy_ecs_tilemap::TilemapPlugin;
 use bevy_egui::EguiPlugin;
-use bevy_inspector_egui::Inspectable;
+
 use bevy_interact_2d::InteractionDebugPlugin;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier2d::prelude::*;

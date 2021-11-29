@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use bevy::{core::Time, log, prelude::*};
-use bevy_prototype_debug_lines::DebugLines;
+use bevy::{prelude::*};
+
 use bevy_rapier2d::{
-    na::{ComplexField, Vector2},
+    na::{ComplexField},
     prelude::*,
 };
 
