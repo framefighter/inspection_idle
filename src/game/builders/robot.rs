@@ -189,15 +189,13 @@ impl<'w> RobotBuilder<'w> {
                     commands
                         .entity(parent)
                         .insert_bundle(self.rigid_body())
-                        .insert(ParentEntity::WaitForAttach)
-                        .insert(EnergyConsumption { consumption: 0.0 });
+                        .insert(ParentEntity::WaitForAttach);
 
                     spawn_item.children.iter().for_each(|child| {
                         let transform = child
                             .ap
                             .map(|ap| {
                                 if let Some(at) = ats.get(&ap) {
-                                    log::info!("Found transform for attachment");
                                     at.transform
                                 } else {
                                     Transform::default()
@@ -240,37 +238,100 @@ impl<'w> RobotBuilder<'w> {
         match item_type {
             ItemType::Robot(RobotItemType::Body) => {
                 // TODO: support multiple batteries on one body
-                commands.entity(parent).insert(Battery {
-                    capacity: 10000.0,
-                    charge: 10000.0,
-                    charge_speed: 1.0,
-                });
+                commands.entity(parent);
             }
             ItemType::Robot(RobotItemType::GroundPropulsion) => {
                 commands.entity(parent).insert(Motors {
-                    angular_damping: 5.0,
-                    linear_damping: 3.0,
-                    linear_speed: 2000.0,
-                    angular_speed: 1000.0,
+                    angular_damping: 0.5,
+                    linear_damping: 0.5,
+                    linear_speed: 4000.0,
+                    angular_speed: 2000.0,
                 });
             }
-            ItemType::Robot(RobotItemType::Camera) => {
-                commands
+            ItemType::Robot(RobotItemType::Camera {
+                fov,
+                zoom,
+                range,
+                speed,
+            }) => {
+                let start = range.0;
+                let end = range.1;
+                let middle = start + zoom + (end + zoom - start + zoom) / 2.0;
+
+                let child = commands
+                    .spawn_bundle((Transform::default(), GlobalTransform::default()))
+                    .insert_bundle(PhysicsBundle {
+                        rigid_body: RigidBodyBundle {
+                            damping: RigidBodyDamping {
+                                linear_damping: 100.0,
+                                angular_damping: 100.0,
+                            },
+                            ..Default::default()
+                        },
+                        pos_sync: RigidBodyPositionSync::Discrete,
+                    })
+                    .insert_bundle(ColliderBundle {
+                        flags: ColliderFlags {
+                            active_hooks: ActiveHooks::FILTER_CONTACT_PAIRS,
+                            active_events: ActiveEvents::INTERSECTION_EVENTS,
+                            ..Default::default()
+                        },
+                        shape: ColliderShape::cuboid(
+                            fov / (2. * PHYSICS_SCALE),
+                            middle / (2. * PHYSICS_SCALE),
+                        ),
+                        mass_properties: ColliderMassProps::Density(0.0),
+                        collider_type: ColliderType::Sensor,
+                        ..Default::default()
+                    })
+                    .insert(ColliderPositionSync::Discrete)
+                    .insert(Interactable {
+                        groups: vec![Group(10)],
+                        bounding_box: (-Vec2::new(fov, middle) / 2., Vec2::new(fov, middle) / 2.),
+                    })
+                    .insert(CameraFov)
+                    .id();
+
+                let parent = commands
                     .entity(parent)
                     .insert(CameraZoom {
-                        zoom: 1.0,
-                        target: 1.0,
-                        range: 0.0..10.0,
-                        speed: 0.01,
+                        zoom,
+                        range: start..end,
+                        speed,
+                        fov,
                     })
                     .insert(ImageQuality {
                         width: 1.0,
                         height: 1.0,
                         noise: 0.0,
-                    });
+                    })
+                    .id();
+
+                let mut joint = PrismaticJoint::new(
+                    Vec2::new(0.0, middle / PHYSICS_SCALE).into(),
+                    Vector::y_axis(),
+                    Vec2::default().into(),
+                    Vector::y_axis(),
+                );
+                // joint.limits = [(start + zoom) / PHYSICS_SCALE, (end + zoom) / PHYSICS_SCALE];
+                commands
+                    .entity(parent)
+                    .insert(JointBuilderComponent::new(joint, parent, child))
+                    .push_children(&[child]);
             }
-            ItemType::Robot(RobotItemType::Battery) => {
-                commands.entity(parent).insert(BatterySprite);
+            ItemType::Robot(RobotItemType::Battery {
+                capacity,
+                charge,
+                charge_speed,
+            }) => {
+                commands.entity(parent).insert(Battery {
+                    capacity,
+                    charge,
+                    charge_speed,
+                });
+            }
+            ItemType::Manometer(ManometerItemType::Icon) => {
+                commands.entity(parent).insert(Manometer);
             }
             _ => {}
         }

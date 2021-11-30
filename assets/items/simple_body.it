@@ -1,23 +1,23 @@
 (
-    size: 1,
+    item_size: ItemSize(1),
     item_type: Robot(Body),
     attachment_points: ({
       MainCamera: (
         position: (-8., 17., 2.),
         rotation: 0.,
         item_types: [
-            Robot(Camera),
+            Robot(Camera ()),
             Robot(Connector),
         ],
-        max_item_size: 2,
+        max_item_size: ItemSize(2),
       ),
       LineFollowerCamera: (
         position: (10., 17., 2.),
         rotation: 0.,
         item_types: [
-            Robot(Camera),
+            Robot(Camera ()),
         ],
-        max_item_size: 1,
+        max_item_size: ItemSize(1),
       ),
       GroundPropulsionRight: (
         position: (15., 0., -1.),
@@ -25,7 +25,7 @@
         item_types: [
             Robot(GroundPropulsion),
         ],
-        max_item_size: 1,
+        max_item_size: ItemSize(1),
       ),
       GroundPropulsionLeft: (
         position: (-15., 0., -1.),
@@ -33,15 +33,15 @@
         item_types: [
             Robot(GroundPropulsion),
         ],
-        max_item_size: 1,
+        max_item_size: ItemSize(1),
       ),
       MainBattery: (
-        position: (9., 0., 1.),
+        position: (8., 0., 1.),
         rotation: 0.,
         item_types: [
-            Robot(Battery),
+            Robot(Battery ()),
         ],
-        max_item_size: 1,
+        max_item_size: ItemSize(1),
       ),
     }),
     sprite: (

@@ -48,12 +48,15 @@ pub fn cameras(
 }
 
 pub fn sprite(
-    mut query: Query<(
-        &Timer,
-        &AnimationDirection,
-        &mut TextureAtlasSprite,
-        &SpriteAsset,
-    )>,
+    mut query: Query<
+        (
+            &Timer,
+            &AnimationDirection,
+            &mut TextureAtlasSprite,
+            &SpriteAsset,
+        ),
+        Changed<Timer>,
+    >,
 ) {
     for (timer, direction, mut texture, sprite) in query.iter_mut() {
         if timer.just_finished() && sprite.frames > 1 {
@@ -67,16 +70,22 @@ pub fn sprite(
 }
 
 pub fn battery(
-    battery_sprite_query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &ParentEntity), With<BatterySprite>>,
-    body_query: Query<&Battery>,
+    battery_sprite_query: Query<
+        (&mut TextureAtlasSprite, &SpriteAsset, &Battery),
+        Changed<Battery>,
+    >,
 ) {
-    battery_sprite_query.for_each_mut(|(mut texture, sprite, parent_entity)| {
-        if let Some(parent) = get_robot_body(parent_entity) {
-            if let Ok(battery) = body_query.get(parent) {
-                let max_frames = sprite.frames as f32;
-                let frame = map_range(&(0.0..battery.capacity), &(0.0..max_frames), battery.charge);
-                texture.index = (frame as u32).min(sprite.frames as u32 - 1);
-            }
-        }
+    battery_sprite_query.for_each_mut(|(mut texture, sprite, battery)| {
+        let max_frames = sprite.frames as f32;
+        let frame = map_range(&(0.0..battery.capacity), &(0.0..max_frames), battery.charge);
+        texture.index = (frame as u32).min(sprite.frames as u32 - 1);
+    });
+}
+
+pub fn manometer(
+    manometer_sprite_query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &Manometer)>,
+) {
+    manometer_sprite_query.for_each_mut(|(mut texture, sprite, _)| {
+        texture.index = (texture.index + 1) % sprite.frames as u32;
     });
 }

@@ -1,0 +1,9 @@
+(
+    item_size: ItemSize(1),
+    item_type: Manometer(Pointer),
+    sprite: (
+        size: (6., 21.),
+        frames: 1,
+    ),
+    joint_type: Ball
+)

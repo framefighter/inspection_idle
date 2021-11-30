@@ -33,7 +33,6 @@ impl Plugin for InspectAllPlugin {
         registry.register::<ImageQuality>();
         registry.register::<JointType>();
         registry.register::<Battery>();
-        registry.register::<EnergyConsumption>();
     }
 }
 

@@ -1,21 +1,19 @@
-use bevy::prelude::*;
+use crate::{
+    game::{components::robot::*, resources::robot_commands::*},
+    utils::get_robot_body,
+};
+use bevy::{log, prelude::*};
 use bevy_rapier2d::{physics::JointHandleComponent, prelude::*};
-use crate::game::components::robot::*;
 
-// TODO: check battery and only allow selected to drive
-pub fn drive_robot(
+// TODO: only allow selected to drive
+pub fn send_drive_robot(
     keyboard_input: Res<Input<KeyCode>>,
     rapier_parameters: Res<RapierConfiguration>,
-    drivable_query: Query<(
-        Entity,
-        &Motors,
-        &mut RigidBodyForces,
-        &Transform,
-        &mut EnergyConsumption,
-    )>,
+    drivable_query: Query<(Entity, &Motors, &Transform, &ParentEntity)>,
+    mut robot_commands: ResMut<RobotCommands>,
 ) {
-    drivable_query.for_each_mut(
-        |(_drivable_entity, drive, mut forces, transform, mut energy_consumption)| {
+    drivable_query.for_each(|(entity, drive, transform, parent)| {
+        if let Some(parent) = get_robot_body(parent) {
             let mut dir = Vec3::new(0.0, 0.0, 0.0);
             dir.y += keyboard_input.pressed(KeyCode::W) as i8 as f32;
             dir.y -= keyboard_input.pressed(KeyCode::S) as i8 as f32;
@@ -25,11 +23,16 @@ pub fn drive_robot(
             let move_delta = dir.normalize_or_zero() / rapier_parameters.scale;
 
             if move_delta.length() > 0.0 {
-                let old_force = forces.force;
-                forces.force = (transform.rotation.mul_vec3(move_delta) * drive.linear_speed)
-                    .truncate()
-                    .into();
-                forces.force += old_force;
+                let force = transform.rotation.mul_vec3(move_delta).truncate() * drive.linear_speed;
+                robot_commands.send(RobotCommand {
+                    robot_entity: parent,
+                    command: RobotCommandType::MoveMotors {
+                        entity,
+                        force,
+                        torque: 0.0,
+                    },
+                    power_consumption: force.length(),
+                });
             }
 
             let r_left = keyboard_input.pressed(KeyCode::Q);
@@ -37,34 +40,83 @@ pub fn drive_robot(
             let r_axis = r_left as i8 - r_right as i8;
             let r_delta = r_axis as f32;
             if r_delta != 0.0 {
-                forces.torque += r_delta / rapier_parameters.scale * drive.angular_speed;
+                let torque = r_delta / rapier_parameters.scale * drive.angular_speed;
+                robot_commands.send(RobotCommand {
+                    robot_entity: parent,
+                    command: RobotCommandType::MoveMotors {
+                        entity,
+                        force: Vec2::ZERO,
+                        torque,
+                    },
+                    power_consumption: torque.abs(),
+                });
             }
-            energy_consumption.consumption = forces.force.magnitude() + forces.torque.abs();
-        },
-    );
+        }
+    });
 }
 
-// TODO: check battery and design joint selection
-pub fn move_joint(
+// TODO: design joint selection
+pub fn send_move_joint(
     keyboard_input: Res<Input<KeyCode>>,
-    joint_query: Query<(&JointHandleComponent, &mut EnergyConsumption)>,
-    mut joint_set: ResMut<JointSet>,
+    joint_query: Query<(&JointHandleComponent, &ParentEntity)>,
+    mut robot_commands: ResMut<RobotCommands>,
 ) {
-    joint_query.for_each_mut(|(joint_handle, mut energy_consumption)| {
-        if let Some(joint) = joint_set.get_mut(joint_handle.handle()) {
-            match joint.params {
-                JointParams::BallJoint(ref mut joint) => {
-                    let vel: f32 = if keyboard_input.pressed(KeyCode::Left) {
-                        1.0
-                    } else if keyboard_input.pressed(KeyCode::Right) {
-                        -1.0
-                    } else {
-                        0.0
-                    };
-                    energy_consumption.consumption = vel.abs();
-                    joint.configure_motor_velocity(vel, 0.5);
-                }
-                _ => {}
+    joint_query.for_each(|(joint_handle, parent_entity)| {
+        if let Some(parent) = get_robot_body(parent_entity) {
+            let input = keyboard_input.just_released(KeyCode::Left)
+                || keyboard_input.just_released(KeyCode::Right);
+
+            let mut velocity: f32 = 0.0;
+            if keyboard_input.pressed(KeyCode::Left) {
+                velocity += 1.0;
+            } else if keyboard_input.pressed(KeyCode::Right) {
+                velocity -= 1.0;
+            }
+            let power_consumption = velocity.abs() * 10.0;
+            if power_consumption > 0.0 || input {
+                robot_commands.send(RobotCommand {
+                    robot_entity: parent,
+                    command: RobotCommandType::MoveJoint {
+                        joint_handle: joint_handle.handle(),
+                        velocity,
+                        damping: 0.2,
+                    },
+                    power_consumption,
+                });
+            }
+        }
+    });
+}
+
+// TODO: move only selected
+pub fn zoom_cameras(
+    keyboard_input: Res<Input<KeyCode>>,
+    query: Query<(Entity, &JointHandleComponent, &CameraZoom, &ParentEntity)>,
+    mut robot_commands: ResMut<RobotCommands>,
+) {
+    query.for_each(|(entity, joint_handle, camera_zoom, parent_entity)| {
+        if let Some(parent) = get_robot_body(parent_entity) {
+            if keyboard_input.pressed(KeyCode::Up) {
+                log::info!("zoom in");
+                robot_commands.send(RobotCommand {
+                    robot_entity: parent,
+                    command: RobotCommandType::MoveJoint {
+                        joint_handle: joint_handle.handle(),
+                        velocity: 1.0,
+                        damping: 0.2,
+                    },
+                    power_consumption: camera_zoom.speed,
+                });
+            } else if keyboard_input.pressed(KeyCode::Down) {
+                robot_commands.send(RobotCommand {
+                    robot_entity: parent,
+                    command: RobotCommandType::MoveJoint {
+                        joint_handle: joint_handle.handle(),
+                        velocity: -1.0,
+                        damping: 0.2,
+                    },
+                    power_consumption: camera_zoom.speed,
+                });
             }
         }
     });

@@ -1,0 +1,8 @@
+(
+    item_size: ItemSize(1),
+    item_type: Manometer(Icon),
+    sprite: (
+        size: (17., 17.),
+        frames: 19,
+    ),
+)

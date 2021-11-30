@@ -133,7 +133,7 @@ pub fn robot_config_ui(
                                 }
                                 ui.indent("h", |ui| {
                                     for (id, item) in items.iter() {
-                                        if ad.is_compatible(&ItemSize(item.size), &item.item_type) {
+                                        if ad.is_compatible(&item.item_size, &item.item_type) {
                                             let handle = &Handle::weak(id);
                                             let information =
                                                 information_collection.get(&handle).unwrap();

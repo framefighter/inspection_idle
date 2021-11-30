@@ -1,6 +1,11 @@
 (
-    size: 1,
-    item_type: Robot(Camera),
+    item_size: ItemSize(1),
+    item_type: Robot(Camera (
+        fov: 50.0,
+        zoom: 1.0,
+        range: (0.0, 20.0),
+        speed: 0.5,
+    )),
     sprite: (
         size: (11., 10.),
         frames: 1,

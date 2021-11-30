@@ -15,13 +15,14 @@ use game::components::collision_filter::*;
 use game::components::robot::ParentEntity;
 use game::resources::item_collection::*;
 use game::resources::item_information::*;
+use game::resources::robot_commands::RobotCommands;
 use game::resources::ui::*;
 
 use std::fmt::Debug;
 
+mod consts;
 mod dev;
 mod game;
-mod consts;
 mod utils;
 
 use bevy_asset_loader::AssetLoader;
@@ -34,7 +35,6 @@ pub enum GameState {
     Game,
 }
 
-
 fn main() {
     let mut app = App::build();
     let hooks = RapierUserData {};
@@ -43,6 +43,7 @@ fn main() {
         .insert_resource(Msaa { samples: 8 })
         .init_resource::<InformationCollection>()
         .init_resource::<UiState>()
+        .init_resource::<RobotCommands>()
         .insert_resource(PhysicsHooksWithQueryObject(Box::new(hooks)))
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
@@ -80,22 +81,22 @@ fn main() {
             .with_system(interaction_marker::update_marker_color.system())
             .with_system(interaction_marker::show_marker.system())
             .with_system(interaction_marker::select_marker.system())
-            .with_system(movement::drive_robot.system())
-            .with_system(movement::move_joint.system())
+            .with_system(movement::send_drive_robot.system())
+            .with_system(movement::send_move_joint.system())
+            .with_system(movement::zoom_cameras.system())
             .with_system(physics::spawn_joints.system())
             .with_system(physics::adjust_damping.system())
             .with_system(physics::reduce_sideways_vel.system())
-            .with_system(input::zoom_cameras.system())
             .with_system(animations::motors.system())
             .with_system(animations::cameras.system())
             .with_system(animations::sprite.system())
             .with_system(animations::battery.system())
+            .with_system(animations::manometer.system())
             .with_system(terrain::build.system())
             .with_system(terrain::update.system())
-            .with_system(energy::update_consumption.system())
-            .with_system(energy::update_battery.system())
-            .with_system(display_events.system()),
+            .with_system(robot_commands::handle_command.system()),
     )
+    .add_system_to_stage(CoreStage::PostUpdate, display_events.system())
     .run();
 }
 
@@ -104,7 +105,11 @@ fn display_events(
     mut contact_events: EventReader<ContactEvent>,
 ) {
     for intersection_event in intersection_events.iter() {
-        log::info!("Received intersection event: {:?}", intersection_event);
+        log::info!(
+            "Received intersection event: {:?} X {:?}",
+            intersection_event.collider1.entity(),
+            intersection_event.collider2.entity()
+        );
     }
 
     for contact_event in contact_events.iter() {

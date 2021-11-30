@@ -48,7 +48,7 @@ impl ItemBundle {
                 ),
             },
             item_type: item.item_type.clone(),
-            item_size: ItemSize(item.size),
+            item_size: item.item_size,
             joint_type: item.joint_type,
             sprite_asset: item.sprite.clone(),
             animation_bundle: AnimationBundle::new(0.3),
@@ -61,7 +61,7 @@ impl ItemBundle {
                             id.clone(),
                             Attachment {
                                 id: id.clone(),
-                                max_size: ItemSize(ap.max_item_size),
+                                max_size: ap.max_item_size,
                                 transform: Transform {
                                     translation: Vec3::new(
                                         ap.position.0,
@@ -80,7 +80,11 @@ impl ItemBundle {
             ),
             item_name: ItemName(information.name.clone()),
             collider: ColliderBundle {
-                flags: ActiveHooks::FILTER_CONTACT_PAIRS.into(),
+                flags: ColliderFlags {
+                    active_hooks: ActiveHooks::FILTER_CONTACT_PAIRS,
+                    active_events: ActiveEvents::INTERSECTION_EVENTS,
+                    ..Default::default()
+                },
                 shape: ColliderShape::cuboid(
                     item.sprite.size.0 / (2. * PHYSICS_SCALE),
                     item.sprite.size.1 / (2. * PHYSICS_SCALE),
@@ -88,6 +92,7 @@ impl ItemBundle {
                 mass_properties: ColliderMassProps::Density(
                     item.sprite.size.0 * item.sprite.size.1 / (20. * PHYSICS_SCALE),
                 ),
+                collider_type: ColliderType::Sensor,
                 ..Default::default()
             },
         }

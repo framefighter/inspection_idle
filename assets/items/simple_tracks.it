@@ -1,5 +1,5 @@
 (
-    size: 1,
+    item_size: ItemSize(1),
     item_type: Robot(GroundPropulsion),
     sprite: (
         size: (48., 48.),

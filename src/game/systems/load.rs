@@ -1,7 +1,15 @@
 use bevy::{log, prelude::*};
 use bevy_rapier2d::{na::Vector2, physics::RapierConfiguration};
 
-use crate::{GameState, consts::PHYSICS_SCALE, game::{builders::robot::RobotBuilder, components::robot::AttachmentPointId, resources::{item_collection::*, item_information::*}}};
+use crate::{
+    consts::PHYSICS_SCALE,
+    game::{
+        builders::robot::RobotBuilder,
+        components::robot::AttachmentPointId,
+        resources::{item_collection::*, item_information::*},
+    },
+    GameState,
+};
 
 pub fn fill_information(
     asset_server: Res<AssetServer>,
@@ -58,7 +66,7 @@ pub fn spawn_entities(
     spawner
         .new()
         .robot(&item_collection.simple_body)
-        .transform(Transform::from_translation(Vec3::new(100.0, 0.0, 90.0)))
+        .transform(Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)))
         .build(&mut commands);
 
     spawner
@@ -79,11 +87,19 @@ pub fn spawn_entities(
             AttachmentPointId::GroundPropulsionRight,
         )
         .attach_then(
-            &item_collection.camera_zoom,
+            &item_collection.sensor_mast_two,
             AttachmentPointId::MainCamera,
-            |zoom_camera| {
-                zoom_camera
-            },
+            |mast| mast.attach(&item_collection.camera_zoom, AttachmentPointId::FirstCamera),
         )
+        .attach(
+            &item_collection.simple_battery,
+            AttachmentPointId::MainBattery,
+        )
+        .build(&mut commands);
+
+    spawner
+        .new()
+        .robot(&item_collection.simple_manometer_icon)
+        .transform(Transform::from_translation(Vec3::new(-100.0, 0.0, 90.0)))
         .build(&mut commands);
 }

@@ -8,5 +8,4 @@ pub mod camera;
 pub mod load;
 pub mod interaction_marker;
 pub mod debug;
-pub mod input;
-pub mod energy;
+pub mod robot_commands;

@@ -1,0 +1,18 @@
+(
+    item_size: ItemSize(1),
+    item_type: Manometer(Frame),
+    attachment_points: ({
+        ManometerMarkings: (
+            position: (0., 0., 1.),
+            rotation: 0.,
+            item_types: [
+                Manometer(Markings),
+            ],
+            max_item_size: ItemSize(1),
+        ),
+    }),
+    sprite: (
+        size: (42., 42.),
+        frames: 1,
+    ),
+)

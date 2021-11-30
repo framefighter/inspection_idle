@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use bevy_interact_2d::*;
 
-use crate::game::{
-    components::robot::*,
-    resources::ui::*,
-};
+use crate::game::{components::robot::*, resources::ui::*};
 
 pub fn update_marker_color(
     eap_q: Query<
@@ -16,19 +13,19 @@ pub fn update_marker_color(
     eap_q.for_each_mut(|(parent, apm, mut texture)| {
         if let Ok(attachments) = parent_q.get(parent.0) {
             if let Some(attached) = attachments.0.get(&apm.id) {
-                if apm.selected {
-                    texture.color = if attached.is_attached() {
+                texture.color = if apm.selected {
+                    if attached.is_attached() {
                         Color::RED
                     } else {
                         Color::YELLOW
-                    };
+                    }
                 } else {
-                    texture.color = if attached.is_attached() {
+                    if attached.is_attached() {
                         Color::GRAY
                     } else {
                         Color::WHITE
-                    };
-                }
+                    }
+                };
             }
         }
     });

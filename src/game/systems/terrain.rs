@@ -6,8 +6,7 @@ use itertools::Itertools;
 
 use crate::game::resources::terrain_collider::TerrainCollider;
 
-pub fn spawn(_commands: Commands) {
-    // eprintln!("spawn_terrain");
+pub fn spawn(mut commands: Commands) {
     // commands
     //     .spawn_bundle(RigidBodyBundle {
     //         body_type: RigidBodyType::Static,

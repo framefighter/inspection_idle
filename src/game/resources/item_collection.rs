@@ -31,13 +31,25 @@ pub struct ItemCollection {
     pub gras_material: Handle<LoadedItem>,
     #[asset(path = "items/gras_materials.it")]
     pub gras_materials: Handle<LoadedItem>,
+
+    #[asset(path = "items/simple_manometer_icon.it")]
+    pub simple_manometer_icon: Handle<LoadedItem>,
+
+    #[asset(path = "items/fancy_manometer_pointer.it")]
+    pub fancy_manometer_pointer: Handle<LoadedItem>,
+    #[asset(path = "items/medium_manometer_markings.it")]
+    pub medium_manometer_markings: Handle<LoadedItem>,
+    #[asset(path = "items/simple_manometer_frame.it")]
+    pub simple_manometer_frame: Handle<LoadedItem>,
+    #[asset(path = "items/simple_manometer_background.it")]
+    pub simple_manometer_background: Handle<LoadedItem>,
 }
 
 #[derive(serde::Deserialize, TypeUuid, Debug, Clone)]
 #[uuid = "1df82c01-9c71-4fa8-adc4-78c5822268f1"]
 pub struct LoadedItem {
     #[serde(default)]
-    pub size: usize,
+    pub item_size: ItemSize,
     #[serde(default)]
     pub z_index: f32,
     #[serde(default)]
@@ -54,7 +66,7 @@ pub struct AttachmentPoint {
     pub position: (f32, f32, f32),
     pub rotation: f32,
     pub item_types: Vec<ItemType>,
-    pub max_item_size: usize,
+    pub max_item_size: ItemSize,
     pub attached_item: Option<Entity>,
 }
 
