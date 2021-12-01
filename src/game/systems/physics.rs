@@ -76,19 +76,23 @@ pub fn spawn_joints(
                                         parent_transform.translation.z + at.transform.translation.z,
                                     ),
                                 ));
-                                let joint = if joint_type == &JointType::Ball {
-                                    let mut ball = BallJoint::new(
-                                        (at.transform.translation.truncate() / PHYSICS_SCALE)
-                                            .into(),
-                                        Vec2::default().into(),
-                                    );
-                                    ball.configure_motor_velocity(0.0, 0.2);
-                                    JointParams::BallJoint(ball)
-                                } else {
-                                    JointParams::FixedJoint(FixedJoint::new(
+                                let joint = match joint_type {
+                                    JointType::Ball => {
+                                        let mut ball = BallJoint::new(
+                                            (at.transform.translation.truncate() / PHYSICS_SCALE)
+                                                .into(),
+                                            Vec2::default().into(),
+                                        );
+                                        ball.configure_motor_velocity(0.0, 0.2);
+                                        JointParams::BallJoint(ball)
+                                    }
+                                    JointType::Fixed => JointParams::FixedJoint(FixedJoint::new(
                                         (at.transform.translation / PHYSICS_SCALE).into(),
                                         Isometry::identity(),
-                                    ))
+                                    )),
+                                    _ => {
+                                        unimplemented!()
+                                    }
                                 };
 
                                 let joint_entity = commands

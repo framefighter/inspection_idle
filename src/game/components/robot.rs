@@ -2,12 +2,15 @@ use std::{fmt::Display, ops::Range};
 
 use bevy::{ecs::component::Component, prelude::*, utils::HashMap};
 use bevy_inspector_egui::Inspectable;
+use bevy_rapier2d::{
+    physics::JointBuilderComponent,
+    prelude::{JointHandle, JointParams},
+};
 use serde::Deserialize;
 
 use crate::game::bundles::empty::EmptyBundle;
 
 use super::terrain::TerrainItemType;
-
 
 #[derive(Debug, Inspectable, Default)]
 pub struct Motors {
@@ -23,6 +26,30 @@ pub struct CameraZoom {
     pub speed: f32,
     pub zoom: f32,
     pub fov: f32,
+
+    pub pov_entity: Option<Entity>,
+}
+
+impl CameraZoom {
+    pub fn middle(&self) -> f32 {
+        self.range.start
+            + self.zoom
+            + (self.range.end + self.zoom - self.range.start + self.zoom) / 2.0
+    }
+
+    pub fn with_pov(&mut self, pov_entity: Entity) {
+        self.pov_entity = Some(pov_entity);
+    }
+
+    pub fn new(range: Range<f32>, speed: f32, zoom: f32, fov: f32) -> Self {
+        Self {
+            range,
+            speed,
+            zoom,
+            fov,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Inspectable, Default)]
@@ -208,7 +235,7 @@ pub enum ManometerItemType {
     Frame,
     Pointer,
     Markings,
-    Icon
+    Icon,
 }
 
 impl Default for ManometerItemType {
@@ -233,7 +260,6 @@ impl Display for ManometerItemType {
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
 pub struct Manometer;
 
-
 #[derive(serde::Deserialize, Debug, Clone, Default)]
 pub struct AttachmentMap<T: Inspectable + Clone>(pub HashMap<AttachmentPointId, T>);
 
@@ -245,6 +271,7 @@ pub enum JointType {
     Fixed,
     Ball,
     Prismatic,
+    Revolute,
 }
 
 impl Default for JointType {
@@ -296,7 +323,6 @@ impl Display for AttachmentPointId {
             Self::ManometerFrame => write!(f, "Manometer Frame"),
             Self::ManometerPointer => write!(f, "Manometer Pointer"),
             Self::ManometerMarkings => write!(f, "Manometer Markings"),
-
         }
     }
 }

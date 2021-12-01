@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use super::animation::AnimationBundle;
+use super::{animation::AnimationBundle, physics::PhysicsBundle};
 
 #[derive(Bundle)]
 pub struct ItemBundle {
@@ -30,6 +30,8 @@ pub struct ItemBundle {
     pub animation_bundle: AnimationBundle,
     #[bundle]
     pub collider: ColliderBundle,
+    #[bundle]
+    pub physics: PhysicsBundle,
 }
 
 impl ItemBundle {
@@ -94,6 +96,21 @@ impl ItemBundle {
                 ),
                 collider_type: ColliderType::Sensor,
                 ..Default::default()
+            },
+            physics: PhysicsBundle {
+                rigid_body: RigidBodyBundle {
+                    position: (
+                        transform.translation.truncate() / PHYSICS_SCALE,
+                        transform.rotation.to_axis_angle().1,
+                    )
+                        .into(),
+                    damping: RigidBodyDamping {
+                        linear_damping: 50.0,
+                        angular_damping: 50.0,
+                    },
+                    ..Default::default()
+                },
+                pos_sync: RigidBodyPositionSync::Discrete,
             },
         }
     }

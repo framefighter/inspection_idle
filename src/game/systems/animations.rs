@@ -10,7 +10,7 @@ use crate::{
         components::{animation::AnimationDirection, robot::*},
         resources::sprite_asset::SpriteAsset,
     },
-    utils::{get_robot_body, map_range},
+    utils::map_range,
 };
 
 pub fn motors(

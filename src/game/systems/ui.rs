@@ -8,6 +8,7 @@ use bevy_egui::{
     egui::{self, Color32, FontDefinitions, FontFamily},
     EguiContext, EguiSettings,
 };
+use bevy_rapier2d::prelude::RigidBodyPosition;
 
 pub fn load_assets(egui_context: ResMut<EguiContext>, _assets: Res<AssetServer>) {
     let mut fonts = FontDefinitions::default();
@@ -55,7 +56,11 @@ pub fn update_ui_scale_factor(
 }
 
 pub fn robot_config_ui(
-    mut query_p: Query<(&mut AttachmentMap<Attachment>, &Transform)>,
+    mut query_p: Query<(
+        &mut AttachmentMap<Attachment>,
+        &Transform,
+        &RigidBodyPosition,
+    )>,
     items: Res<Assets<LoadedItem>>,
     mut ui_state: ResMut<UiState>,
     mut commands: Commands,
@@ -87,7 +92,9 @@ pub fn robot_config_ui(
                         RobotBuilder::init(&items, &information_collection, &item_collection);
                     ui.separator();
                     if let Some(entity) = attachment_menu.item_to_attach_to.entity {
-                        if let Ok((ref mut attachments, transform)) = query_p.get_mut(entity) {
+                        if let Ok((ref mut attachments, transform, rb_pos)) =
+                            query_p.get_mut(entity)
+                        {
                             if let Some(ad) = attachments
                                 .0
                                 .get_mut(&attachment_menu.item_to_attach_to.attachment_point_id)
@@ -163,7 +170,15 @@ pub fn robot_config_ui(
                                                         &handle,
                                                         ad.id,
                                                         entity,
-                                                        transform.mul_transform(ad.transform),
+                                                        Transform {
+                                                            translation: transform
+                                                                .mul_vec3(ad.transform.translation),
+                                                            rotation: Quat::from_axis_angle(
+                                                                Vec3::Z,
+                                                                rb_pos.position.rotation.angle(),
+                                                            ),
+                                                            ..Default::default()
+                                                        },
                                                     )
                                                     .build(&mut commands);
                                             }

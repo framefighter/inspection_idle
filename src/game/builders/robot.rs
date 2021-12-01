@@ -162,6 +162,7 @@ impl<'w> RobotBuilder<'w> {
                     let markers = self.interaction_markers(&bundle.attachments);
                     let parent = commands
                         .spawn_bundle(bundle)
+                        .insert(ParentEntity::WaitForAttach)
                         .with_children(|cb| {
                             markers.into_iter().for_each(|im| {
                                 cb.spawn_bundle(im);
@@ -185,11 +186,6 @@ impl<'w> RobotBuilder<'w> {
                     }
 
                     Self::attach_additional_components(commands, item.item_type, parent);
-
-                    commands
-                        .entity(parent)
-                        .insert_bundle(self.rigid_body())
-                        .insert(ParentEntity::WaitForAttach);
 
                     spawn_item.children.iter().for_each(|child| {
                         let transform = child
@@ -236,10 +232,7 @@ impl<'w> RobotBuilder<'w> {
 
     fn attach_additional_components(commands: &mut Commands, item_type: ItemType, parent: Entity) {
         match item_type {
-            ItemType::Robot(RobotItemType::Body) => {
-                // TODO: support multiple batteries on one body
-                commands.entity(parent);
-            }
+            ItemType::Robot(RobotItemType::Body) => {}
             ItemType::Robot(RobotItemType::GroundPropulsion) => {
                 commands.entity(parent).insert(Motors {
                     angular_damping: 0.5,
@@ -256,20 +249,11 @@ impl<'w> RobotBuilder<'w> {
             }) => {
                 let start = range.0;
                 let end = range.1;
-                let middle = start + zoom + (end + zoom - start + zoom) / 2.0;
-
+                let mut camera_zoom = CameraZoom::new(start..end, speed, zoom, fov);
+                let middle = camera_zoom.middle();
+                let transform = Transform::from_xyz(0.0, middle, -1.0);
                 let child = commands
                     .spawn_bundle((Transform::default(), GlobalTransform::default()))
-                    .insert_bundle(PhysicsBundle {
-                        rigid_body: RigidBodyBundle {
-                            damping: RigidBodyDamping {
-                                linear_damping: 100.0,
-                                angular_damping: 100.0,
-                            },
-                            ..Default::default()
-                        },
-                        pos_sync: RigidBodyPositionSync::Discrete,
-                    })
                     .insert_bundle(ColliderBundle {
                         flags: ColliderFlags {
                             active_hooks: ActiveHooks::FILTER_CONTACT_PAIRS,
@@ -280,6 +264,7 @@ impl<'w> RobotBuilder<'w> {
                             fov / (2. * PHYSICS_SCALE),
                             middle / (2. * PHYSICS_SCALE),
                         ),
+                        position: (transform.translation / PHYSICS_SCALE).into(),
                         mass_properties: ColliderMassProps::Density(0.0),
                         collider_type: ColliderType::Sensor,
                         ..Default::default()
@@ -291,33 +276,18 @@ impl<'w> RobotBuilder<'w> {
                     })
                     .insert(CameraFov)
                     .id();
-
-                let parent = commands
+                camera_zoom.with_pov(child);
+                commands
                     .entity(parent)
-                    .insert(CameraZoom {
-                        zoom,
-                        range: start..end,
-                        speed,
-                        fov,
-                    })
+                    .insert(camera_zoom)
                     .insert(ImageQuality {
                         width: 1.0,
                         height: 1.0,
                         noise: 0.0,
                     })
-                    .id();
-
-                let mut joint = PrismaticJoint::new(
-                    Vec2::new(0.0, middle / PHYSICS_SCALE).into(),
-                    Vector::y_axis(),
-                    Vec2::default().into(),
-                    Vector::y_axis(),
-                );
-                // joint.limits = [(start + zoom) / PHYSICS_SCALE, (end + zoom) / PHYSICS_SCALE];
-                commands
-                    .entity(parent)
-                    .insert(JointBuilderComponent::new(joint, parent, child))
-                    .push_children(&[child]);
+                    .with_children(|cb| {
+                        cb.spawn().push_children(&[child]);
+                    });
             }
             ItemType::Robot(RobotItemType::Battery {
                 capacity,
@@ -371,19 +341,5 @@ impl<'w> RobotBuilder<'w> {
                 aid: id.clone(),
             })
             .collect()
-    }
-
-    fn rigid_body(&self) -> PhysicsBundle {
-        PhysicsBundle {
-            rigid_body: RigidBodyBundle {
-                position: (self.transform.translation / PHYSICS_SCALE).into(),
-                damping: RigidBodyDamping {
-                    linear_damping: 100.0,
-                    angular_damping: 100.0,
-                },
-                ..Default::default()
-            },
-            pos_sync: RigidBodyPositionSync::Discrete,
-        }
     }
 }
