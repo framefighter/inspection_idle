@@ -1,4 +1,4 @@
-use bevy::{log, prelude::*};
+use bevy::{log, prelude::*, render::texture::FilterMode};
 use bevy_rapier2d::{na::Vector2, physics::RapierConfiguration};
 
 use crate::{
@@ -24,7 +24,13 @@ pub fn fill_information(
         let field_name = item_collection.name_at(i).unwrap();
         if let Some(value) = value.downcast_ref::<Handle<LoadedItem>>() {
             let item = items.get(value.clone()).unwrap();
-            let sprite_path = format!("sprites/{}.png", field_name);
+            let sprite_path = format!(
+                "sprites/{}.png",
+                item.sprite
+                    .sprite_name
+                    .as_ref()
+                    .unwrap_or(&field_name.to_string())
+            );
             log::info!("LOADING: {}", field_name);
             log::info!("\t - sprite path: {}", sprite_path);
 
@@ -42,7 +48,7 @@ pub fn fill_information(
                 ItemInformation::new(
                     texture_atlas_handle,
                     material_handle,
-                    item.sprite,
+                    item.sprite.clone(),
                     field_name.to_string(),
                 ),
             );
@@ -63,11 +69,11 @@ pub fn spawn_entities(
     rapier_config.gravity = Vector2::zeros();
     rapier_config.scale = PHYSICS_SCALE;
 
-    spawner
-        .new()
-        .robot(&item_collection.simple_body)
-        .transform(Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)))
-        .build(&mut commands);
+    // spawner
+    //     .new()
+    //     .robot(&item_collection.simple_body)
+    //     .transform(Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)))
+    //     .build(&mut commands);
 
     spawner
         .new()
@@ -89,7 +95,18 @@ pub fn spawn_entities(
         .attach_then(
             &item_collection.sensor_mast_two,
             AttachmentPointId::MainCamera,
-            |mast| mast.attach(&item_collection.camera_zoom, AttachmentPointId::FirstCamera),
+            |mast| {
+                mast.attach_then(
+                    &item_collection.camera_zoom,
+                    AttachmentPointId::FirstCamera,
+                    |f| {
+                        f.attach(
+                            &item_collection.camera_lens_telephoto,
+                            AttachmentPointId::CameraLens,
+                        )
+                    },
+                )
+            },
         )
         .attach(
             &item_collection.simple_battery,
@@ -102,4 +119,34 @@ pub fn spawn_entities(
         .robot(&item_collection.simple_manometer_icon)
         .transform(Transform::from_translation(Vec3::new(-100.0, 0.0, 90.0)))
         .build(&mut commands);
+
+    spawner
+        .new()
+        .robot(&item_collection.simple_manometer_icon)
+        .transform(Transform::from_translation(Vec3::new(-50.0, 50.0, 90.0)))
+        .build(&mut commands);
+
+    spawner
+        .new()
+        .robot(&item_collection.simple_manometer_icon)
+        .transform(Transform::from_translation(Vec3::new(50.0, 50.0, 90.0)))
+        .build(&mut commands);
+}
+
+pub fn set_texture_filters_to_nearest(
+    mut texture_events: EventReader<AssetEvent<Texture>>,
+    mut textures: ResMut<Assets<Texture>>,
+) {
+    // quick and dirty, run this for all textures anytime a texture is created.
+    for event in texture_events.iter() {
+        match event {
+            AssetEvent::Created { handle } => {
+                if let Some(mut texture) = textures.get_mut(handle) {
+                    log::info!("Setting texture filter to nearest for {:?}", handle);
+                    texture.sampler.min_filter = FilterMode::Nearest;
+                }
+            }
+            _ => (),
+        }
+    }
 }

@@ -50,7 +50,7 @@ pub fn spawn_joints(
     query: Query<(Entity, &WantToAttach, &ItemSize, &ItemType, &JointType)>,
     mut tag_queries: QuerySet<(
         Query<(&ParentEntity, &Transform)>,
-        Query<(&mut ParentEntity, &mut Transform, &mut ColliderType)>,
+        Query<(&mut ParentEntity, &mut Transform)>,
     )>,
     mut query_p: Query<&mut AttachmentMap<Attachment>>,
 ) {
@@ -90,6 +90,16 @@ pub fn spawn_joints(
                                         (at.transform.translation / PHYSICS_SCALE).into(),
                                         Isometry::identity(),
                                     )),
+                                    JointType::Prismatic => {
+                                        let prismatic = PrismaticJoint::new(
+                                            (at.transform.translation.truncate() / PHYSICS_SCALE)
+                                                .into(),
+                                            Vector::y_axis(),
+                                            Vec2::default().into(),
+                                            Vector::y_axis(),
+                                        );
+                                        JointParams::PrismaticJoint(prismatic)
+                                    }
                                     _ => {
                                         unimplemented!()
                                     }
@@ -125,13 +135,31 @@ pub fn spawn_joints(
     parent_tags
         .iter()
         .for_each(|(child_entity, (parent_tag, parent_height))| {
-            if let Ok((mut child_tag, mut transform, mut collider_type)) =
-                tag_queries.q1_mut().get_mut(*child_entity)
+            if let Ok((mut child_tag, mut transform)) = tag_queries.q1_mut().get_mut(*child_entity)
             {
-                *collider_type = ColliderType::Solid;
                 *child_tag = parent_tag.unwrap_or(ParentEntity::Robot(Some(*child_entity)));
                 transform.translation.z = *parent_height;
                 commands.entity(*child_entity).remove::<WantToAttach>();
             }
         });
+}
+
+pub fn set_collision_for_item_types(
+    query: Query<(&ItemType, &mut ColliderType), Changed<ParentEntity>>,
+) {
+    query.for_each_mut(|(item_type, mut collider_type)| {
+        match item_type {
+            ItemType::Robot(RobotItemType::CameraLens { .. }) => {
+                *collider_type = ColliderType::Sensor;
+            }
+            _ => {
+                *collider_type = ColliderType::Solid;
+            }
+        }
+        log::info!(
+            "Set Collider Type of {:?} to {:?}",
+            item_type,
+            collider_type
+        );
+    });
 }

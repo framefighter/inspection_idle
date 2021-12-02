@@ -20,6 +20,10 @@ pub struct ItemCollection {
     pub camera_hd: Handle<LoadedItem>,
     #[asset(path = "items/camera_zoom.it")]
     pub camera_zoom: Handle<LoadedItem>,
+    #[asset(path = "items/camera_lens_wide.it")]
+    pub camera_lens_wide: Handle<LoadedItem>,
+    #[asset(path = "items/camera_lens_telephoto.it")]
+    pub camera_lens_telephoto: Handle<LoadedItem>,
 
     #[asset(path = "items/simple_battery.it")]
     pub simple_battery: Handle<LoadedItem>,

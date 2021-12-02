@@ -84,31 +84,49 @@ pub fn send_move_joint(
 // TODO: move only selected
 pub fn zoom_cameras(
     keyboard_input: Res<Input<KeyCode>>,
-    query: Query<(Entity, &CameraZoom, &ParentEntity)>,
+    query: Query<(&JointHandleComponent, &CameraLens, &ParentEntity)>,
     mut robot_commands: ResMut<RobotCommands>,
 ) {
-    query.for_each(|(entity, camera_zoom, parent_entity)| {
-        if keyboard_input.pressed(KeyCode::Up) {
-            log::info!("zoom in");
-            robot_commands.send(RobotCommand {
-                robot_entity: *parent_entity,
-                command: RobotCommandType::ZoomCamera {
-                    entity: entity,
-                    pov_entity: camera_zoom.pov_entity.unwrap(),
-                    zoom_delta: camera_zoom.speed,
-                },
-                power_consumption: camera_zoom.speed.abs(),
-            });
+    query.for_each(|(joint_handle, camera_lens, parent_entity)| {
+        let velocity = if keyboard_input.pressed(KeyCode::Up) {
+            camera_lens.focus_speed
         } else if keyboard_input.pressed(KeyCode::Down) {
-            robot_commands.send(RobotCommand {
-                robot_entity: *parent_entity,
-                command: RobotCommandType::ZoomCamera {
-                    entity: entity,
-                    pov_entity: camera_zoom.pov_entity.unwrap(),
-                    zoom_delta: -camera_zoom.speed,
-                },
-                power_consumption: camera_zoom.speed.abs(),
-            });
-        }
+            -camera_lens.focus_speed
+        } else {
+            0.0
+        };
+        robot_commands.send(RobotCommand {
+            robot_entity: *parent_entity,
+            command: RobotCommandType::MoveJoint {
+                joint_handle: joint_handle.handle(),
+                velocity,
+                damping: 0.2,
+            },
+            power_consumption: velocity.abs(),
+        });
+    });
+}
+
+pub fn set_initial_camera_lens(
+    query: Query<(&JointHandleComponent, &CameraLens, &ParentEntity), Changed<ParentEntity>>,
+    mut robot_commands: ResMut<RobotCommands>,
+) {
+    query.for_each(|(joint_handle, camera_lens, parent_entity)| {
+        robot_commands.send(RobotCommand {
+            robot_entity: *parent_entity,
+            command: RobotCommandType::SetJoint {
+                joint_handle: joint_handle.handle(),
+                position: camera_lens.focal_length,
+            },
+            power_consumption: 0.0,
+        });
+        robot_commands.send(RobotCommand {
+            robot_entity: *parent_entity,
+            command: RobotCommandType::SetJointLimits {
+                joint_handle: joint_handle.handle(),
+                limits: camera_lens.focal_length_range.clone(),
+            },
+            power_consumption: 0.0,
+        });
     });
 }

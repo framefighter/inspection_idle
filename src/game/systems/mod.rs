@@ -9,3 +9,4 @@ pub mod load;
 pub mod interaction_marker;
 pub mod debug;
 pub mod robot_commands;
+pub mod inspection;

@@ -8,9 +8,7 @@ use crate::{
 
 pub fn handle_command(
     batteries: Query<(&mut Battery, &ParentEntity)>,
-    mut zoomable_entities: Query<(&mut CameraZoom, &Children)>,
     mut drivable_entities: Query<&mut RigidBodyForces>,
-    mut camera_fov_entities: Query<(&mut Transform, &mut ColliderPosition), With<CameraFov>>,
     mut joint_set: ResMut<JointSet>,
     mut robot_commands: ResMut<RobotCommands>,
 ) {
@@ -29,25 +27,6 @@ pub fn handle_command(
         });
         if consumption <= 0.0 {
             match robot_command.command {
-                RobotCommandType::MoveJoint {
-                    joint_handle,
-                    velocity,
-                    damping,
-                } => {
-                    log::info!("Move joint to {}", velocity);
-                    joint_set
-                        .get_mut(joint_handle)
-                        .map(|joint| match joint.params {
-                            JointParams::BallJoint(ref mut ball_joint) => {
-                                ball_joint.configure_motor_velocity(velocity, damping);
-                            }
-                            JointParams::PrismaticJoint(ref mut prismatic_joint) => {
-                                log::info!("prismatic joint: {}", velocity);
-                                prismatic_joint.configure_motor_velocity(velocity, damping);
-                            }
-                            _ => {}
-                        });
-                }
                 RobotCommandType::MoveMotors {
                     entity,
                     force,
@@ -65,26 +44,63 @@ pub fn handle_command(
                         })
                         .ok();
                 }
-                RobotCommandType::ZoomCamera {
-                    entity,
-                    pov_entity,
-                    zoom_delta,
+                RobotCommandType::MoveJoint {
+                    joint_handle,
+                    velocity,
+                    damping,
                 } => {
-                    zoomable_entities
-                        .get_mut(entity)
-                        .map(|(ref mut zoom_camera, children)| {
-                            zoom_camera.zoom = zoom_camera.zoom + zoom_delta;
-                            let middle = zoom_camera.middle();
-                            camera_fov_entities
-                                .get_mut(pov_entity)
-                                .map(|(mut transform, mut collider_pos)| {
-                                    // *transform = Transform::from_xyz(0.0, middle, -1.0);
-                                    let transform = Transform::from_xyz(0.0, middle, -1.0);
-                                    *collider_pos = (transform.translation / PHYSICS_SCALE).into();
-                                })
-                                .ok();
-                        })
-                        .ok();
+                    joint_set
+                        .get_mut(joint_handle)
+                        .map(|joint| match joint.params {
+                            JointParams::BallJoint(ref mut ball_joint) => {
+                                ball_joint.configure_motor_velocity(velocity, damping);
+                            }
+                            JointParams::PrismaticJoint(ref mut prismatic_joint) => {
+                                prismatic_joint.configure_motor_velocity(velocity, damping);
+                            }
+                            _ => {}
+                        });
+                }
+                RobotCommandType::SetJoint {
+                    joint_handle,
+                    position,
+                } => {
+                    joint_set
+                        .get_mut(joint_handle)
+                        .map(|joint| match joint.params {
+                            JointParams::BallJoint(ref mut ball_joint) => {
+                                ball_joint.configure_motor_position(
+                                    Rotation::from_angle(position),
+                                    0.5,
+                                    0.5,
+                                );
+                            }
+                            JointParams::PrismaticJoint(ref mut prismatic_joint) => {
+                                prismatic_joint.configure_motor_position(
+                                    position / PHYSICS_SCALE,
+                                    0.5,
+                                    0.5,
+                                );
+                            }
+                            JointParams::FixedJoint(ref mut fixed_joint) => {
+                                fixed_joint.local_frame1.translation =
+                                    Vec2::new(0.0, position / PHYSICS_SCALE).into();
+                            }
+                        });
+                }
+                RobotCommandType::SetJointLimits {
+                    joint_handle,
+                    limits,
+                } => {
+                    joint_set
+                        .get_mut(joint_handle)
+                        .map(|joint| match joint.params {
+                            JointParams::PrismaticJoint(ref mut prismatic_joint) => {
+                                prismatic_joint.limits =
+                                    [limits.start / PHYSICS_SCALE, limits.end / PHYSICS_SCALE];
+                            }
+                            _ => {}
+                        });
                 }
             }
         }

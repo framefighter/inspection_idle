@@ -29,7 +29,7 @@ impl Plugin for InspectAllPlugin {
         registry.register::<Motors>();
         registry.register::<TerrainCollider>();
         registry.register::<ParentEntity>();
-        registry.register::<CameraZoom>();
+        registry.register::<CameraLens>();
         registry.register::<ImageQuality>();
         registry.register::<JointType>();
         registry.register::<Battery>();

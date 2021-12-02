@@ -1,7 +1,6 @@
-use std::collections::VecDeque;
+use std::ops::Range;
 
 use bevy::prelude::*;
-use bevy_inspector_egui::Inspectable;
 use bevy_rapier2d::prelude::*;
 
 use crate::game::components::robot::ParentEntity;
@@ -36,10 +35,12 @@ pub enum RobotCommandType {
         velocity: f32,
         damping: f32,
     },
-    ZoomCamera {
-        entity: Entity,
-        pov_entity: Entity,
-        zoom_delta: f32,
-    }
+    SetJoint {
+        joint_handle: JointHandle,
+        position: f32,
+    },
+    SetJointLimits {
+        joint_handle: JointHandle,
+        limits: Range<f32>,
+    },
 }
-

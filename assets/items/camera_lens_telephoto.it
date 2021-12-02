@@ -1,0 +1,15 @@
+(
+    item_size: ItemSize(2),
+    item_type: Robot(CameraLens (
+        Telephoto(
+            focal_lengths: (20.0, 100.0),
+            focus_speed: 2.0,
+        )
+    )),
+    sprite: (
+        size: (1., 1.),
+        frames: 1,
+        sprite_name: Some("camera_lens"),
+    ),
+    joint_type: Prismatic,
+)

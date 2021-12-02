@@ -70,7 +70,8 @@ fn main() {
             // .with_system(tile_map::startup.system())
             .with_system(ui::load_assets.system())
             .with_system(ui::configure_visuals.system())
-            .with_system(terrain::spawn.system()),
+            .with_system(terrain::spawn.system())
+            .with_system(load::set_texture_filters_to_nearest.system()),
     )
     .add_system_set(
         SystemSet::on_update(GameState::Game)
@@ -84,14 +85,18 @@ fn main() {
             .with_system(movement::send_drive_robot.system())
             .with_system(movement::send_move_joint.system())
             .with_system(movement::zoom_cameras.system())
+            .with_system(movement::set_initial_camera_lens.system())
             .with_system(physics::spawn_joints.system())
             .with_system(physics::adjust_damping.system())
             .with_system(physics::reduce_sideways_vel.system())
+            .with_system(physics::set_collision_for_item_types.system())
             .with_system(animations::motors.system())
             .with_system(animations::cameras.system())
             .with_system(animations::sprite.system())
             .with_system(animations::battery.system())
             .with_system(animations::manometer.system())
+            .with_system(inspection::inspect_manometer.system())
+            .with_system(inspection::update_manometer_progress.system())
             .with_system(terrain::build.system())
             .with_system(terrain::update.system())
             .with_system(robot_commands::handle_command.system()),

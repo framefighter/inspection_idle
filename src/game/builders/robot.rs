@@ -157,6 +157,7 @@ impl<'w> RobotBuilder<'w> {
         if let Some(spawn_item) = &self.spawn_item {
             if let Some(item) = self.items.get(spawn_item.handle.clone()) {
                 if let Some(information) = self.information_collection.get(&spawn_item.handle) {
+                    log::info!("RobotSpawner: building robot from item {:#?}", item);
                     let bundle = ItemBundle::new(item, &information, self.transform);
                     let ats = bundle.attachments.0.clone();
                     let markers = self.interaction_markers(&bundle.attachments);
@@ -241,53 +242,25 @@ impl<'w> RobotBuilder<'w> {
                     angular_speed: 2000.0,
                 });
             }
-            ItemType::Robot(RobotItemType::Camera {
-                fov,
-                zoom,
-                range,
-                speed,
-            }) => {
-                let start = range.0;
-                let end = range.1;
-                let mut camera_zoom = CameraZoom::new(start..end, speed, zoom, fov);
-                let middle = camera_zoom.middle();
-                let transform = Transform::from_xyz(0.0, middle, -1.0);
-                let child = commands
-                    .spawn_bundle((Transform::default(), GlobalTransform::default()))
-                    .insert_bundle(ColliderBundle {
-                        flags: ColliderFlags {
-                            active_hooks: ActiveHooks::FILTER_CONTACT_PAIRS,
-                            active_events: ActiveEvents::INTERSECTION_EVENTS,
-                            ..Default::default()
-                        },
-                        shape: ColliderShape::cuboid(
-                            fov / (2. * PHYSICS_SCALE),
-                            middle / (2. * PHYSICS_SCALE),
-                        ),
-                        position: (transform.translation / PHYSICS_SCALE).into(),
-                        mass_properties: ColliderMassProps::Density(0.0),
-                        collider_type: ColliderType::Sensor,
-                        ..Default::default()
-                    })
-                    .insert(ColliderPositionSync::Discrete)
-                    .insert(Interactable {
-                        groups: vec![Group(10)],
-                        bounding_box: (-Vec2::new(fov, middle) / 2., Vec2::new(fov, middle) / 2.),
-                    })
-                    .insert(CameraFov)
-                    .id();
-                camera_zoom.with_pov(child);
+            ItemType::Robot(RobotItemType::Camera) => {
+                commands.entity(parent).insert(ImageQuality {
+                    width: 1.0,
+                    height: 1.0,
+                    noise: 0.0,
+                });
+            }
+            ItemType::Robot(RobotItemType::CameraLens(CameraLensType::Wide { focal_length })) => {
                 commands
                     .entity(parent)
-                    .insert(camera_zoom)
-                    .insert(ImageQuality {
-                        width: 1.0,
-                        height: 1.0,
-                        noise: 0.0,
-                    })
-                    .with_children(|cb| {
-                        cb.spawn().push_children(&[child]);
-                    });
+                    .insert(CameraLens::new_wide(focal_length));
+            }
+            ItemType::Robot(RobotItemType::CameraLens(CameraLensType::Telephoto {
+                focal_lengths,
+                focus_speed,
+            })) => {
+                commands
+                    .entity(parent)
+                    .insert(CameraLens::new_telephoto(focal_lengths, focus_speed));
             }
             ItemType::Robot(RobotItemType::Battery {
                 capacity,
@@ -300,8 +273,11 @@ impl<'w> RobotBuilder<'w> {
                     charge_speed,
                 });
             }
-            ItemType::Manometer(ManometerItemType::Icon) => {
-                commands.entity(parent).insert(Manometer);
+            ItemType::Manometer(ManometerItemType::Icon { progress }) => {
+                commands.entity(parent).insert(Manometer {
+                    progress,
+                    is_inspecting: false,
+                });
             }
             _ => {}
         }

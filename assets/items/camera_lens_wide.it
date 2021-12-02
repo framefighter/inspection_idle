@@ -1,0 +1,14 @@
+(
+    item_size: ItemSize(1
+),
+    item_type: Robot(CameraLens (
+        Wide (
+            focal_length: 20.0,
+        )
+    )),
+    sprite: (
+        size: (1., 1.),
+        frames: 1,
+        sprite_name: Some("camera_lens"),
+    ),
+)

@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Range};
 
-use bevy::{ecs::component::Component, prelude::*, utils::HashMap};
+use bevy::{ecs::component::Component, prelude::*, utils::HashMap, log};
 use bevy_inspector_egui::Inspectable;
 use bevy_rapier2d::{
     physics::JointBuilderComponent,
@@ -21,33 +21,38 @@ pub struct Motors {
 }
 
 #[derive(Debug, Inspectable, Default)]
-pub struct CameraZoom {
-    pub range: Range<f32>,
-    pub speed: f32,
-    pub zoom: f32,
-    pub fov: f32,
-
-    pub pov_entity: Option<Entity>,
+pub struct CameraLens {
+    pub focal_length_range: Range<f32>,
+    pub focus_speed: f32,
+    pub focal_length: f32,
 }
 
-impl CameraZoom {
+impl CameraLens {
     pub fn middle(&self) -> f32 {
-        self.range.start
-            + self.zoom
-            + (self.range.end + self.zoom - self.range.start + self.zoom) / 2.0
+        self.focal_length_range.start
+            + self.focal_length
+            + (self.focal_length_range.end + self.focal_length - self.focal_length_range.start
+                + self.focal_length)
+                / 2.0
     }
 
-    pub fn with_pov(&mut self, pov_entity: Entity) {
-        self.pov_entity = Some(pov_entity);
-    }
-
-    pub fn new(range: Range<f32>, speed: f32, zoom: f32, fov: f32) -> Self {
+    pub fn new_wide(focal_length: f32) -> Self {
         Self {
-            range,
-            speed,
-            zoom,
-            fov,
-            ..Default::default()
+            focal_length_range: focal_length..focal_length,
+            focus_speed: 0.0,
+            focal_length,
+        }
+    }
+
+    pub fn new_telephoto(
+        focal_length_range: (f32, f32),
+        focus_speed: f32,
+    ) -> Self {
+        log::info!("focus_speed: {:?}", focus_speed);
+        Self {
+            focal_length_range: focal_length_range.0..focal_length_range.1,
+            focus_speed,
+            focal_length: focal_length_range.0,
         }
     }
 }
@@ -58,8 +63,6 @@ pub struct ImageQuality {
     pub height: f32,
     pub noise: f32,
 }
-
-pub struct CameraFov;
 
 #[derive(Debug, Inspectable, Default)]
 pub struct Battery {
@@ -110,17 +113,10 @@ impl Attachment {
 
     pub fn is_compatible(&self, item_size: &ItemSize, item_type: &ItemType) -> bool {
         self.max_size.compatible(item_size)
-            && self.accepted_types.iter().any(|it| match (item_type, it) {
-                (
-                    ItemType::Robot(RobotItemType::Camera { .. }),
-                    ItemType::Robot(RobotItemType::Camera { .. }),
-                ) => true,
-                (
-                    ItemType::Robot(RobotItemType::Battery { .. }),
-                    ItemType::Robot(RobotItemType::Battery { .. }),
-                ) => true,
-                (a, b) => a == b,
-            })
+            && self
+                .accepted_types
+                .iter()
+                .any(|it| item_type.to_string() == it.to_string())
     }
 
     pub fn is_attached(&self) -> bool {
@@ -186,16 +182,8 @@ impl Display for ItemType {
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
 pub enum RobotItemType {
     None,
-    Camera {
-        #[serde(default)]
-        fov: f32,
-        #[serde(default)]
-        zoom: f32,
-        #[serde(default)]
-        range: (f32, f32),
-        #[serde(default)]
-        speed: f32,
-    },
+    Camera,
+    CameraLens(CameraLensType),
     Body,
     GroundPropulsion,
     Connector,
@@ -220,10 +208,42 @@ impl Display for RobotItemType {
         match self {
             Self::None => write!(f, "None"),
             Self::Camera { .. } => write!(f, "Camera"),
+            Self::CameraLens { .. } => write!(f, "Camera Lens"),
             Self::Body => write!(f, "Body"),
             Self::GroundPropulsion => write!(f, "Ground Propulsion"),
             Self::Connector => write!(f, "Connector"),
             Self::Battery { .. } => write!(f, "Battery"),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
+pub enum CameraLensType {
+    None,
+    Wide {
+        #[serde(default)]
+        focal_length: f32,
+    },
+    Telephoto {
+        #[serde(default)]
+        focal_lengths: (f32, f32),
+        #[serde(default)]
+        focus_speed: f32,
+    },
+}
+
+impl Default for CameraLensType {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl Display for CameraLensType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "None"),
+            Self::Wide { .. } => write!(f, "Wide"),
+            Self::Telephoto { .. } => write!(f, "Telephoto"),
         }
     }
 }
@@ -235,7 +255,10 @@ pub enum ManometerItemType {
     Frame,
     Pointer,
     Markings,
-    Icon,
+    Icon {
+        #[serde(default)]
+        progress: f32,
+    },
 }
 
 impl Default for ManometerItemType {
@@ -252,13 +275,16 @@ impl Display for ManometerItemType {
             Self::Frame => write!(f, "Frame"),
             Self::Pointer => write!(f, "Pointer"),
             Self::Markings => write!(f, "Markings"),
-            Self::Icon => write!(f, "Icon"),
+            Self::Icon {..} => write!(f, "Icon"),
         }
     }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
-pub struct Manometer;
+pub struct Manometer {
+    pub is_inspecting: bool,
+    pub progress: f32,
+}
 
 #[derive(serde::Deserialize, Debug, Clone, Default)]
 pub struct AttachmentMap<T: Inspectable + Clone>(pub HashMap<AttachmentPointId, T>);
@@ -296,6 +322,8 @@ pub enum AttachmentPointId {
     SecondCamera,
     MainBattery,
 
+    CameraLens,
+
     ManometerBackground,
     ManometerFrame,
     ManometerPointer,
@@ -318,6 +346,8 @@ impl Display for AttachmentPointId {
             Self::FirstCamera => write!(f, "First Camera"),
             Self::SecondCamera => write!(f, "Second Camera"),
             Self::MainBattery => write!(f, "Main Battery"),
+
+            Self::CameraLens => write!(f, "Camera Lens"),
 
             Self::ManometerBackground => write!(f, "Manometer Background"),
             Self::ManometerFrame => write!(f, "Manometer Frame"),

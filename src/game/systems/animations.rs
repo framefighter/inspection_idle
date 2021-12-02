@@ -38,11 +38,15 @@ pub fn motors(
 }
 
 pub fn cameras(
-    query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &CameraZoom), Changed<CameraZoom>>,
+    query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &CameraLens), Changed<CameraLens>>,
 ) {
-    query.for_each_mut(|(mut texture, sprite, camera_zoom)| {
+    query.for_each_mut(|(mut texture, sprite, camera_lens)| {
         let max_frames = sprite.frames as f32;
-        let frame = map_range(&camera_zoom.range, &(0.0..max_frames), camera_zoom.zoom);
+        let frame = map_range(
+            &camera_lens.focal_length_range,
+            &(0.0..max_frames),
+            camera_lens.focal_length,
+        );
         texture.index = (frame as u32).min(sprite.frames as u32 - 1);
     });
 }
@@ -85,7 +89,9 @@ pub fn battery(
 pub fn manometer(
     manometer_sprite_query: Query<(&mut TextureAtlasSprite, &SpriteAsset, &Manometer)>,
 ) {
-    manometer_sprite_query.for_each_mut(|(mut texture, sprite, _)| {
-        texture.index = (texture.index + 1) % sprite.frames as u32;
+    manometer_sprite_query.for_each_mut(|(mut texture, sprite, manometer)| {
+        let max_frames = sprite.frames as f32;
+        let frame = map_range(&(0.0..100.0), &(0.0..max_frames), manometer.progress);
+        texture.index = (frame as u32).min(sprite.frames as u32 - 1);
     });
 }

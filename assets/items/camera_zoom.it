@@ -1,11 +1,17 @@
 (
     item_size: ItemSize(2),
-    item_type: Robot(Camera (
-        fov: 30.0,
-        zoom: 10.0,
-        range: (0.0, 200.0),
-        speed: 1.0,
-    )),
+    item_type: Robot(Camera),
+    attachment_points: ({
+        CameraLens: (
+            position: (0., 5., 1.),
+            rotation: 0.,
+            item_types: [
+                 Robot(CameraLens(Wide())),
+                  Robot(CameraLens(Telephoto())),
+            ],
+            max_item_size: ItemSize(2),
+        ),
+    }),
     sprite: (
         size: (11., 14.),
         frames: 3,
