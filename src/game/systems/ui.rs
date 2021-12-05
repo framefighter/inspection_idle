@@ -1,5 +1,5 @@
 use crate::game::{
-    builders::robot::RobotBuilder,
+    builders::item::{ItemBuilder, ItemSpawner},
     components::robot::*,
     resources::{item_collection::*, item_information::InformationCollection, ui::UiState},
 };
@@ -89,7 +89,7 @@ pub fn robot_config_ui(
             if ui_state.show_attachment_points {
                 if let Some(attachment_menu) = &ui_state.show_attachment_menu {
                     let mut spawner =
-                        RobotBuilder::init(&items, &information_collection, &item_collection);
+                        ItemSpawner::new(&items, &information_collection, &item_collection);
                     ui.separator();
                     if let Some(entity) = attachment_menu.item_to_attach_to.entity {
                         if let Ok((ref mut attachments, transform, rb_pos)) =
@@ -122,7 +122,7 @@ pub fn robot_config_ui(
                                             .join(",\n\t")
                                     ),
                                 );
-                                if let Some((attached_entity, joint_entity)) = ad.attached {
+                                if ad.attached.is_some() {
                                     if ui
                                         .add(
                                             egui::Button::new("❌ Remove")
@@ -131,11 +131,9 @@ pub fn robot_config_ui(
                                         )
                                         .clicked()
                                     {
-                                        ad.attached = None;
                                         ui_state.show_attachment_menu =
                                             ui_state.show_attachment_menu.clone();
-                                        commands.entity(attached_entity).despawn_recursive();
-                                        commands.entity(joint_entity).despawn_recursive();
+                                        ad.detach(&mut commands);
                                     }
                                 }
                                 ui.indent("h", |ui| {
@@ -148,38 +146,9 @@ pub fn robot_config_ui(
                                             {
                                                 ui_state.show_attachment_menu =
                                                     ui_state.show_attachment_menu.clone();
-                                                if let Some((attached_entity, joint_entity)) =
-                                                    ad.attached
-                                                {
-                                                    ad.attached = None;
-                                                    commands
-                                                        .entity(attached_entity)
-                                                        .despawn_recursive();
-                                                    commands
-                                                        .entity(joint_entity)
-                                                        .despawn_recursive();
-                                                }
-                                                log::info!(
-                                                    "ADDING {} with transform: {:?}",
-                                                    ad.id,
-                                                    ad.transform
-                                                );
+                                                ad.detach(&mut commands);
                                                 spawner
-                                                    .new()
-                                                    .attachment(
-                                                        &handle,
-                                                        ad.id,
-                                                        entity,
-                                                        Transform {
-                                                            translation: transform
-                                                                .mul_vec3(ad.transform.translation),
-                                                            rotation: Quat::from_axis_angle(
-                                                                Vec3::Z,
-                                                                rb_pos.position.rotation.angle(),
-                                                            ),
-                                                            ..Default::default()
-                                                        },
-                                                    )
+                                                    .attachment(&handle, ad.id, entity)
                                                     .build(&mut commands);
                                             }
                                         }
@@ -190,5 +159,8 @@ pub fn robot_config_ui(
                     }
                 }
             }
+            ui.separator();
+            ui.heading("Inspections");
+            ui.label(format!("Manometers: {}", ui_state.manometers_inspected));
         });
 }

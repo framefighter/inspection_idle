@@ -1,16 +1,9 @@
 use std::{fmt::Display, ops::Range};
 
-use bevy::{ecs::component::Component, prelude::*, utils::HashMap, log};
+use bevy::{log, prelude::*, utils::HashMap};
 use bevy_inspector_egui::Inspectable;
-use bevy_rapier2d::{
-    physics::JointBuilderComponent,
-    prelude::{JointHandle, JointParams},
-};
-use serde::Deserialize;
 
-use crate::game::bundles::empty::EmptyBundle;
-
-use super::terrain::TerrainItemType;
+use crate::game::types::ItemType;
 
 #[derive(Debug, Inspectable, Default)]
 pub struct Motors {
@@ -44,10 +37,7 @@ impl CameraLens {
         }
     }
 
-    pub fn new_telephoto(
-        focal_length_range: (f32, f32),
-        focus_speed: f32,
-    ) -> Self {
+    pub fn new_telephoto(focal_length_range: (f32, f32), focus_speed: f32) -> Self {
         log::info!("focus_speed: {:?}", focus_speed);
         Self {
             focal_length_range: focal_length_range.0..focal_length_range.1,
@@ -111,6 +101,13 @@ impl Attachment {
         self.attached = Some((item, joint));
     }
 
+    pub fn detach(&mut self, commands: &mut Commands) {
+        if let Some((item, joint)) = self.attached.take() {
+            commands.entity(item).despawn_recursive();
+            commands.entity(joint).despawn_recursive();
+        }
+    }
+
     pub fn is_compatible(&self, item_size: &ItemSize, item_type: &ItemType) -> bool {
         self.max_size.compatible(item_size)
             && self
@@ -155,134 +152,11 @@ impl WantToAttach {
 pub struct ItemName(pub String);
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
-pub enum ItemType {
-    Item,
-    Robot(RobotItemType),
-    Terrain(TerrainItemType),
-    Manometer(ManometerItemType),
-}
-
-impl Default for ItemType {
-    fn default() -> Self {
-        ItemType::Item
-    }
-}
-
-impl Display for ItemType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ItemType::Item => write!(f, "Item"),
-            ItemType::Robot(t) => write!(f, "{}", t.to_string()),
-            ItemType::Terrain(t) => write!(f, "{}", t.to_string()),
-            ItemType::Manometer(t) => write!(f, "{}", t.to_string()),
-        }
-    }
-}
-
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
-pub enum RobotItemType {
-    None,
-    Camera,
-    CameraLens(CameraLensType),
-    Body,
-    GroundPropulsion,
-    Connector,
-    Battery {
-        #[serde(default)]
-        capacity: f32,
-        #[serde(default)]
-        charge: f32,
-        #[serde(default)]
-        charge_speed: f32,
-    },
-}
-
-impl Default for RobotItemType {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl Display for RobotItemType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::None => write!(f, "None"),
-            Self::Camera { .. } => write!(f, "Camera"),
-            Self::CameraLens { .. } => write!(f, "Camera Lens"),
-            Self::Body => write!(f, "Body"),
-            Self::GroundPropulsion => write!(f, "Ground Propulsion"),
-            Self::Connector => write!(f, "Connector"),
-            Self::Battery { .. } => write!(f, "Battery"),
-        }
-    }
-}
-
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
-pub enum CameraLensType {
-    None,
-    Wide {
-        #[serde(default)]
-        focal_length: f32,
-    },
-    Telephoto {
-        #[serde(default)]
-        focal_lengths: (f32, f32),
-        #[serde(default)]
-        focus_speed: f32,
-    },
-}
-
-impl Default for CameraLensType {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl Display for CameraLensType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::None => write!(f, "None"),
-            Self::Wide { .. } => write!(f, "Wide"),
-            Self::Telephoto { .. } => write!(f, "Telephoto"),
-        }
-    }
-}
-
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
-pub enum ManometerItemType {
-    None,
-    Background,
-    Frame,
-    Pointer,
-    Markings,
-    Icon {
-        #[serde(default)]
-        progress: f32,
-    },
-}
-
-impl Default for ManometerItemType {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl Display for ManometerItemType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::None => write!(f, "None"),
-            Self::Background => write!(f, "Background"),
-            Self::Frame => write!(f, "Frame"),
-            Self::Pointer => write!(f, "Pointer"),
-            Self::Markings => write!(f, "Markings"),
-            Self::Icon {..} => write!(f, "Icon"),
-        }
-    }
-}
+pub struct WaypointMarker;
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Inspectable, Copy)]
 pub struct Manometer {
-    pub is_inspecting: bool,
+    pub inspections: f32,
     pub progress: f32,
 }
 
@@ -324,10 +198,14 @@ pub enum AttachmentPointId {
 
     CameraLens,
 
+    Manometer,
     ManometerBackground,
     ManometerFrame,
     ManometerPointer,
     ManometerMarkings,
+
+    Next,
+    Previous,
 }
 
 impl Default for AttachmentPointId {
@@ -349,10 +227,14 @@ impl Display for AttachmentPointId {
 
             Self::CameraLens => write!(f, "Camera Lens"),
 
+            Self::Manometer => write!(f, "Manometer"),
             Self::ManometerBackground => write!(f, "Manometer Background"),
             Self::ManometerFrame => write!(f, "Manometer Frame"),
             Self::ManometerPointer => write!(f, "Manometer Pointer"),
             Self::ManometerMarkings => write!(f, "Manometer Markings"),
+
+            Self::Next => write!(f, "Next"),
+            Self::Previous => write!(f, "Previous"),
         }
     }
 }
@@ -370,5 +252,18 @@ pub enum ParentEntity {
 impl Default for ParentEntity {
     fn default() -> Self {
         Self::None
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, Default, Inspectable)]
+pub struct ItemOrigin(pub f32, pub f32);
+
+impl ItemOrigin {
+    pub fn new(origin: (f32, f32)) -> Self {
+        Self(origin.0, origin.1)
+    }
+
+    pub fn to_vec2(&self) -> Vec2 {
+        Vec2::new(self.0, self.1)
     }
 }

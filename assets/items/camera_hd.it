@@ -3,7 +3,7 @@
     item_type: Robot(Camera),
     attachment_points: ({
         CameraLens: (
-            position: (0., 5., 1.),
+            position: (0., 5., -10.),
             rotation: 0.,
             item_types: [
                 Robot(CameraLens(Wide())),

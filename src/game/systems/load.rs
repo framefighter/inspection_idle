@@ -4,7 +4,7 @@ use bevy_rapier2d::{na::Vector2, physics::RapierConfiguration};
 use crate::{
     consts::PHYSICS_SCALE,
     game::{
-        builders::robot::RobotBuilder,
+        builders::item::{ItemBuilder, ItemSpawner},
         components::robot::AttachmentPointId,
         resources::{item_collection::*, item_information::*},
     },
@@ -64,7 +64,7 @@ pub fn spawn_entities(
     items: Res<Assets<LoadedItem>>,
     mut rapier_config: ResMut<RapierConfiguration>,
 ) {
-    let mut spawner = RobotBuilder::init(&items, &information_collection, &item_collection);
+    let mut spawner = ItemSpawner::new(&items, &information_collection, &item_collection);
 
     rapier_config.gravity = Vector2::zeros();
     rapier_config.scale = PHYSICS_SCALE;
@@ -76,10 +76,9 @@ pub fn spawn_entities(
     //     .build(&mut commands);
 
     spawner
-        .new()
-        .robot(&item_collection.simple_body)
-        .transform(Transform::from_translation(Vec3::new(0.0, 0.0, 90.0)))
-        .select()
+        .item(&item_collection.simple_body)
+        // .transform(Transform::from_translation(Vec3::new(0.0, 0.0, 90.0)))
+        // .select()
         .attach(
             &item_collection.camera_hd,
             AttachmentPointId::LineFollowerCamera,
@@ -112,24 +111,6 @@ pub fn spawn_entities(
             &item_collection.simple_battery,
             AttachmentPointId::MainBattery,
         )
-        .build(&mut commands);
-
-    spawner
-        .new()
-        .robot(&item_collection.simple_manometer_icon)
-        .transform(Transform::from_translation(Vec3::new(-100.0, 0.0, 90.0)))
-        .build(&mut commands);
-
-    spawner
-        .new()
-        .robot(&item_collection.simple_manometer_icon)
-        .transform(Transform::from_translation(Vec3::new(-50.0, 50.0, 90.0)))
-        .build(&mut commands);
-
-    spawner
-        .new()
-        .robot(&item_collection.simple_manometer_icon)
-        .transform(Transform::from_translation(Vec3::new(50.0, 50.0, 90.0)))
         .build(&mut commands);
 }
 

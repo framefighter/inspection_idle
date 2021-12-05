@@ -1,0 +1,19 @@
+(
+    item_size: ItemSize(1),
+    item_type: Environment(Pipe),
+    attachment_points: ({
+        Next: (
+            position: (8.0, 2.0, 1.),
+            rotation: 270.,
+            item_types: [
+                Environment(Pipe),
+            ],
+            max_item_size: ItemSize(1),
+        ),
+    }),
+    sprite: (
+        size: (16., 16.),
+        frames: 1,
+    ),
+    origin: (-2.0, -8.0),
+)

@@ -15,19 +15,15 @@ pub fn send_drive_robot(
         dir.y -= keyboard_input.pressed(KeyCode::S) as i8 as f32;
         dir.x += keyboard_input.pressed(KeyCode::A) as i8 as f32;
         dir.x -= keyboard_input.pressed(KeyCode::D) as i8 as f32;
-
-        let move_delta = dir.normalize_or_zero() / rapier_parameters.scale;
-
-        if move_delta.length() > 0.0 {
-            let force = transform.rotation.mul_vec3(move_delta).truncate() * drive.linear_speed;
+        if dir.length() > 0.0 {
             robot_commands.send(RobotCommand {
                 robot_entity: *parent_entity,
                 command: RobotCommandType::MoveMotors {
                     entity,
-                    force,
+                    delta: dir.truncate(),
                     torque: 0.0,
                 },
-                power_consumption: force.length(),
+                power_consumption: dir.length() * 10.0,
             });
         }
 
@@ -41,7 +37,7 @@ pub fn send_drive_robot(
                 robot_entity: *parent_entity,
                 command: RobotCommandType::MoveMotors {
                     entity,
-                    force: Vec2::ZERO,
+                    delta: Vec2::ZERO,
                     torque,
                 },
                 power_consumption: torque.abs(),
@@ -53,7 +49,7 @@ pub fn send_drive_robot(
 // TODO: design joint selection
 pub fn send_move_joint(
     keyboard_input: Res<Input<KeyCode>>,
-    joint_query: Query<(&JointHandleComponent, &ParentEntity)>,
+    joint_query: Query<(&JointHandleComponent, &ParentEntity), Without<CameraLens>>,
     mut robot_commands: ResMut<RobotCommands>,
 ) {
     joint_query.for_each(|(joint_handle, parent_entity)| {
@@ -117,13 +113,6 @@ pub fn set_initial_camera_lens(
             command: RobotCommandType::SetJoint {
                 joint_handle: joint_handle.handle(),
                 position: camera_lens.focal_length,
-            },
-            power_consumption: 0.0,
-        });
-        robot_commands.send(RobotCommand {
-            robot_entity: *parent_entity,
-            command: RobotCommandType::SetJointLimits {
-                joint_handle: joint_handle.handle(),
                 limits: camera_lens.focal_length_range.clone(),
             },
             power_consumption: 0.0,

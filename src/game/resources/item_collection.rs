@@ -1,8 +1,11 @@
-use bevy::{prelude::*, reflect::{Reflect, TypeUuid}};
+use bevy::{
+    prelude::*,
+    reflect::{Reflect, TypeUuid},
+};
 use bevy_asset_loader::AssetCollection;
 use bevy_inspector_egui::Inspectable;
 
-use crate::game::components::robot::*;
+use crate::game::{components::robot::*, types::ItemType};
 
 use super::sprite_asset::SpriteAsset;
 
@@ -30,11 +33,20 @@ pub struct ItemCollection {
 
     #[asset(path = "items/interaction_point.it")]
     pub interaction_point: Handle<LoadedItem>,
+    #[asset(path = "items/waypoint_marker.it")]
+    pub waypoint_marker: Handle<LoadedItem>,
 
     #[asset(path = "items/gras_material.it")]
     pub gras_material: Handle<LoadedItem>,
     #[asset(path = "items/gras_materials.it")]
     pub gras_materials: Handle<LoadedItem>,
+
+    #[asset(path = "items/gray_pipe.it")]
+    pub gray_pipe: Handle<LoadedItem>,
+    #[asset(path = "items/gray_pipe_bent.it")]
+    pub gray_pipe_bent: Handle<LoadedItem>,
+    #[asset(path = "items/gray_pipe_split.it")]
+    pub gray_pipe_split: Handle<LoadedItem>,
 
     #[asset(path = "items/simple_manometer_icon.it")]
     pub simple_manometer_icon: Handle<LoadedItem>,
@@ -59,6 +71,8 @@ pub struct LoadedItem {
     #[serde(default)]
     pub item_type: ItemType,
     #[serde(default)]
+    pub origin: (f32, f32),
+    #[serde(default)]
     pub attachment_points: AttachmentMap<AttachmentPoint>,
     #[serde(default)]
     pub joint_type: JointType,
@@ -73,4 +87,3 @@ pub struct AttachmentPoint {
     pub max_item_size: ItemSize,
     pub attached_item: Option<Entity>,
 }
-

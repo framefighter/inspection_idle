@@ -1,5 +1,5 @@
 (
-    item_type: Terrain(Ground),
+    item_type: Environment(Ground),
     sprite: (
         size: (48., 48.),
         frames: 1,

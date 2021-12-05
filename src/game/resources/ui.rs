@@ -7,6 +7,7 @@ use crate::game::components::robot::AttachmentPointId;
 pub struct UiState {
     pub show_attachment_menu: Option<UiAttachmentMenu>,
     pub show_attachment_points: bool,
+    pub manometers_inspected: usize,
 }
 
 #[derive(Default, Inspectable, Clone)]

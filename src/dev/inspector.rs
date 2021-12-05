@@ -3,7 +3,7 @@ use bevy_inspector_egui::*;
 
 use crate::game::{
     components::robot::*,
-    resources::{sprite_asset::SpriteAsset, terrain_collider::TerrainCollider},
+    resources::{sprite_asset::SpriteAsset, terrain_collider::TerrainCollider}, types::ItemType,
 };
 
 pub struct InspectAllPlugin;
@@ -33,6 +33,7 @@ impl Plugin for InspectAllPlugin {
         registry.register::<ImageQuality>();
         registry.register::<JointType>();
         registry.register::<Battery>();
+        registry.register::<ItemOrigin>();
     }
 }
 

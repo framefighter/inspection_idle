@@ -27,7 +27,7 @@ pub struct RobotCommand {
 pub enum RobotCommandType {
     MoveMotors {
         entity: Entity,
-        force: Vec2,
+        delta: Vec2,
         torque: f32,
     },
     MoveJoint {
@@ -38,9 +38,6 @@ pub enum RobotCommandType {
     SetJoint {
         joint_handle: JointHandle,
         position: f32,
-    },
-    SetJointLimits {
-        joint_handle: JointHandle,
         limits: Range<f32>,
     },
 }

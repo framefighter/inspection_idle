@@ -1,0 +1,7 @@
+(
+    item_type: Marker(Waypoint),
+    sprite: (
+        size: (20., 20.),
+        frames: 1,
+    )
+)

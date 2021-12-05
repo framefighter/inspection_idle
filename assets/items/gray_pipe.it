@@ -1,0 +1,27 @@
+(
+    item_size: ItemSize(1),
+    item_type: Environment(Pipe),
+    attachment_points: ({
+        Next: (
+            position: (0., 15., 1.),
+            rotation: 0.,
+            item_types: [
+                Environment(Pipe),
+            ],
+            max_item_size: ItemSize(1),
+        ),
+        Manometer: (
+            position: (0., 5., 1.),
+            rotation: 0.,
+            item_types: [
+                Manometer(Icon()),
+            ],
+            max_item_size: ItemSize(1),
+        ),
+    }),
+    sprite: (
+        size: (12., 30.),
+        frames: 2,
+    ),
+    origin: (0., -15.),
+)

@@ -10,6 +10,7 @@ use crate::{
             item_collection::LoadedItem, item_information::ItemInformation,
             sprite_asset::SpriteAsset,
         },
+        types::ItemType,
     },
 };
 
@@ -26,6 +27,7 @@ pub struct ItemBundle {
     pub sprite_asset: SpriteAsset,
     pub attachments: AttachmentMap<Attachment>,
     pub item_name: ItemName,
+    pub origin: ItemOrigin,
     #[bundle]
     pub animation_bundle: AnimationBundle,
     #[bundle]
@@ -35,10 +37,13 @@ pub struct ItemBundle {
 }
 
 impl ItemBundle {
-    pub fn new(item: &LoadedItem, information: &ItemInformation, transform: Transform) -> Self {
+    pub fn new(item: &LoadedItem, information: &ItemInformation) -> Self {
         Self {
             sprite_sheet_bundle: SpriteSheetBundle {
-                transform,
+                visible: Visible {
+                    is_visible: false,
+                    is_transparent: true,
+                },
                 texture_atlas: information.atlas_handle.clone(),
                 ..Default::default()
             },
@@ -54,6 +59,7 @@ impl ItemBundle {
             joint_type: item.joint_type,
             sprite_asset: item.sprite.clone(),
             animation_bundle: AnimationBundle::new(0.3),
+            origin: ItemOrigin::new(item.origin),
             attachments: AttachmentMap(
                 item.attachment_points
                     .0
@@ -70,7 +76,10 @@ impl ItemBundle {
                                         ap.position.1,
                                         ap.position.2,
                                     ),
-                                    rotation: Quat::from_axis_angle(Vec3::Z, ap.rotation),
+                                    rotation: Quat::from_axis_angle(
+                                        Vec3::Z,
+                                        ap.rotation * std::f32::consts::PI / 180.0,
+                                    ),
                                     ..Default::default()
                                 },
                                 accepted_types: ap.item_types.clone(),
@@ -99,15 +108,11 @@ impl ItemBundle {
             },
             physics: PhysicsBundle {
                 rigid_body: RigidBodyBundle {
-                    position: (
-                        transform.translation.truncate() / PHYSICS_SCALE,
-                        transform.rotation.to_axis_angle().1,
-                    )
-                        .into(),
                     damping: RigidBodyDamping {
                         linear_damping: 50.0,
                         angular_damping: 50.0,
                     },
+                    activation: RigidBodyActivation::cannot_sleep(),
                     ..Default::default()
                 },
                 pos_sync: RigidBodyPositionSync::Discrete,

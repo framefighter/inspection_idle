@@ -1,16 +1,13 @@
+use crate::game::types::*;
 use bevy::{log, prelude::*};
 use bevy_interact_2d::{Group, Interactable};
-use bevy_rapier2d::prelude::*;
 
-use crate::{
-    consts::PHYSICS_SCALE,
-    game::{
-        bundles::{
-            interaction_marker::InteractionMarkerBundle, item::ItemBundle, physics::PhysicsBundle,
-        },
-        components::robot::*,
-        resources::{item_collection::*, item_information::*},
+use crate::game::{
+    bundles::{
+        interaction_marker::InteractionMarkerBundle, item::ItemBundle, physics::PhysicsBundle,
     },
+    components::robot::*,
+    resources::{item_collection::*, item_information::*},
 };
 
 #[derive(Clone)]
@@ -42,19 +39,14 @@ impl SpawnItem {
     }
 }
 
-pub struct RobotBuilder<'w> {
+pub struct ItemSpawner<'w> {
     pub items: &'w Assets<LoadedItem>,
     pub information_collection: &'w InformationCollection,
     pub item_collection: &'w ItemCollection,
-
-    selected: bool,
-    super_parent: Option<(Entity, AttachmentPointId)>,
-    transform: Transform,
-    spawn_item: Option<SpawnItem>,
 }
 
-impl<'w> RobotBuilder<'w> {
-    pub fn init(
+impl<'w> ItemSpawner<'w> {
+    pub fn new(
         items: &'w Assets<LoadedItem>,
         information_collection: &'w InformationCollection,
         item_collection: &'w ItemCollection,
@@ -63,51 +55,56 @@ impl<'w> RobotBuilder<'w> {
             items,
             information_collection,
             item_collection,
-            selected: false,
-            spawn_item: None,
-            super_parent: None,
+        }
+    }
+
+    pub fn item(&self, handle: &Handle<LoadedItem>) -> ItemBuilder {
+        ItemBuilder {
+            items: self.items,
+            information_collection: self.information_collection,
+            item_collection: self.item_collection,
+
+            attach_to: None,
+            spawn_item: Some(SpawnItem::root(handle.clone())),
             transform: Transform::default(),
         }
     }
 
-    pub fn new(&mut self) -> &mut Self {
-        self.super_parent = None;
-        self.spawn_item = None;
-        self.transform = Transform::default();
-        self.selected = false;
-        self
-    }
-
-    pub fn robot(&mut self, handle: &Handle<LoadedItem>) -> &mut Self {
-        if self.spawn_item.is_none() {
-            self.spawn_item = Some(SpawnItem::root(handle.clone()));
-        } else {
-            log::warn!("RobotSpawner: robot() called twice without calling new()");
-        }
-        self
-    }
-
     pub fn attachment(
-        &mut self,
+        &self,
         handle: &Handle<LoadedItem>,
         aid: AttachmentPointId,
         parent: Entity,
-        transform: Transform,
-    ) -> &mut Self {
-        if self.spawn_item.is_none() {
-            self.spawn_item = Some(SpawnItem::root(handle.clone()));
-            if self.super_parent.is_none() {
-                self.super_parent = Some((parent, aid));
-                self.transform = transform;
-            } else {
-            }
-        } else {
-            log::warn!("RobotSpawner: attachment() called twice without calling new()");
+    ) -> ItemBuilder {
+        ItemBuilder {
+            items: self.items,
+            information_collection: self.information_collection,
+            item_collection: self.item_collection,
+
+            attach_to: Some((parent, aid)),
+            spawn_item: Some(SpawnItem::root(handle.clone())),
+            transform: Transform::default(),
         }
+    }
+}
+
+pub struct ItemBuilder<'w> {
+    pub items: &'w Assets<LoadedItem>,
+    pub information_collection: &'w InformationCollection,
+    pub item_collection: &'w ItemCollection,
+
+    attach_to: Option<(Entity, AttachmentPointId)>,
+    spawn_item: Option<SpawnItem>,
+    transform: Transform,
+}
+
+impl<'w> ItemBuilder<'w> {
+    pub fn attach_to(&mut self, parent: Entity, aid: AttachmentPointId) -> &mut Self {
+        self.attach_to = Some((parent, aid));
         self
     }
-
     pub fn transform(&mut self, transform: Transform) -> &mut Self {
+        // TODO use transform
         self.transform = transform;
         self
     }
@@ -117,10 +114,6 @@ impl<'w> RobotBuilder<'w> {
         } else {
             log::warn!("RobotSpawner: attach() called without calling robot()");
         }
-        self
-    }
-    pub fn select(&mut self) -> &mut Self {
-        self.selected = true;
         self
     }
     pub fn attach_then(
@@ -133,8 +126,7 @@ impl<'w> RobotBuilder<'w> {
             items: self.items,
             information_collection: self.information_collection,
             item_collection: self.item_collection,
-            selected: false,
-            super_parent: None,
+            attach_to: None,
             spawn_item: Some(SpawnItem::child(handle.clone(), id)),
             transform: Transform::default(),
         };
@@ -157,9 +149,7 @@ impl<'w> RobotBuilder<'w> {
         if let Some(spawn_item) = &self.spawn_item {
             if let Some(item) = self.items.get(spawn_item.handle.clone()) {
                 if let Some(information) = self.information_collection.get(&spawn_item.handle) {
-                    log::info!("RobotSpawner: building robot from item {:#?}", item);
-                    let bundle = ItemBundle::new(item, &information, self.transform);
-                    let ats = bundle.attachments.0.clone();
+                    let bundle = ItemBundle::new(item, &information);
                     let markers = self.interaction_markers(&bundle.attachments);
                     let parent = commands
                         .spawn_bundle(bundle)
@@ -170,43 +160,22 @@ impl<'w> RobotBuilder<'w> {
                             })
                         })
                         .id();
-
-                    if self.selected {
-                        commands.entity(parent).insert(Selected(true));
-                    }
-                    // if let Some(aid) = spawn_item.ap {
-                    //     commands.entity(parent).insert(WantToAttach(aid));
-                    // }
-                    if let Some((super_parent, aid)) = &self.super_parent {
-                        // commands.entity(*super_parent).push_children(&[parent]);
+                    if let Some((super_parent, aid)) = &self.attach_to {
                         commands
                             .entity(parent)
                             .insert(WantToAttach::to(*super_parent, *aid));
                     } else {
                         commands.entity(parent).insert(WantToAttach::me());
                     }
-
                     Self::attach_additional_components(commands, item.item_type, parent);
-
                     spawn_item.children.iter().for_each(|child| {
-                        let transform = child
-                            .ap
-                            .map(|ap| {
-                                if let Some(at) = ats.get(&ap) {
-                                    at.transform
-                                } else {
-                                    Transform::default()
-                                }
-                            })
-                            .unwrap_or_default();
                         let child_spawner = &mut Self {
                             items: self.items,
                             information_collection: self.information_collection,
                             item_collection: self.item_collection,
-                            selected: false,
-                            super_parent: Some((parent, child.ap.unwrap())),
+                            attach_to: Some((parent, child.ap.unwrap())),
                             spawn_item: Some(child.clone()),
-                            transform,
+                            transform: Transform::default(),
                         };
                         child_spawner.build(commands);
                     });
@@ -276,8 +245,11 @@ impl<'w> RobotBuilder<'w> {
             ItemType::Manometer(ManometerItemType::Icon { progress }) => {
                 commands.entity(parent).insert(Manometer {
                     progress,
-                    is_inspecting: false,
+                    inspections: 0.,
                 });
+            }
+            ItemType::Marker(MarkerItemType::Waypoint) => {
+                commands.entity(parent).insert(WaypointMarker);
             }
             _ => {}
         }
@@ -301,6 +273,10 @@ impl<'w> RobotBuilder<'w> {
             .iter()
             .map(|(id, attachment)| InteractionMarkerBundle {
                 sprite: SpriteSheetBundle {
+                    visible:  Visible {
+                        is_visible: false,
+                        is_transparent: true,
+                    },
                     transform: Transform {
                         translation: attachment.transform.mul_vec3(Vec3::new(1., 1., 99.)),
                         scale: size / 10.,

@@ -8,7 +8,7 @@ use crate::{
 
 pub fn handle_command(
     batteries: Query<(&mut Battery, &ParentEntity)>,
-    mut drivable_entities: Query<&mut RigidBodyForces>,
+    mut drivable_entities: Query<(&mut RigidBodyForces, &Motors, &Transform)>,
     mut joint_set: ResMut<JointSet>,
     mut robot_commands: ResMut<RobotCommands>,
 ) {
@@ -29,14 +29,22 @@ pub fn handle_command(
             match robot_command.command {
                 RobotCommandType::MoveMotors {
                     entity,
-                    force,
+                    delta,
                     torque,
                 } => {
                     drivable_entities
                         .get_mut(entity)
-                        .map(|ref mut rb| {
-                            if force.length() > 0.0 {
-                                rb.force = force.into();
+                        .map(|(ref mut rb, drive, transform)| {
+                            let move_delta = delta.normalize_or_zero() / PHYSICS_SCALE;
+                            if move_delta.length() > 0.0 {
+                                let force = transform
+                                    .rotation
+                                    .mul_vec3(move_delta.extend(0.0))
+                                    .truncate()
+                                    * drive.linear_speed;
+                                if force.length() > 0.0 {
+                                    rb.force = force.into();
+                                }
                             }
                             if torque != 0.0 {
                                 rb.torque = torque;
@@ -64,6 +72,7 @@ pub fn handle_command(
                 RobotCommandType::SetJoint {
                     joint_handle,
                     position,
+                    limits,
                 } => {
                     joint_set
                         .get_mut(joint_handle)
@@ -81,25 +90,13 @@ pub fn handle_command(
                                     0.5,
                                     0.5,
                                 );
+                                prismatic_joint.limits =
+                                    [limits.start / PHYSICS_SCALE, limits.end / PHYSICS_SCALE];
                             }
                             JointParams::FixedJoint(ref mut fixed_joint) => {
                                 fixed_joint.local_frame1.translation =
                                     Vec2::new(0.0, position / PHYSICS_SCALE).into();
                             }
-                        });
-                }
-                RobotCommandType::SetJointLimits {
-                    joint_handle,
-                    limits,
-                } => {
-                    joint_set
-                        .get_mut(joint_handle)
-                        .map(|joint| match joint.params {
-                            JointParams::PrismaticJoint(ref mut prismatic_joint) => {
-                                prismatic_joint.limits =
-                                    [limits.start / PHYSICS_SCALE, limits.end / PHYSICS_SCALE];
-                            }
-                            _ => {}
                         });
                 }
             }
