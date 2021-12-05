@@ -11,7 +11,7 @@ use crate::game::{
 use bevy::prelude::*;
 use bevy_rapier2d::{physics::IntoEntity, prelude::IntersectionEvent};
 use rand::prelude::*;
-
+use rand::seq::SliceRandom;
 // TODO: advance with timer
 pub fn inspect_manometer(
     mut query_manometer: Query<&mut Manometer>,
@@ -75,48 +75,56 @@ pub fn build_pipe_line(
     // pipe_line.timer.tick(time.delta());
 
     // if pipe_line.timer.finished() && rand::random() {
-        if let Some(parent) = pipe_line.current {
+    if let Some((i, &(parent, aid))) = pipe_line
+        .current
+        .iter()
+        .enumerate()
+        .choose(&mut rand::thread_rng())
+    {
+        pipe_line.current.remove(i);
+        if rand::random() {
+            let mut straight = spawner.attachment(&item_collection.gray_pipe, aid, parent);
             if rand::random() {
-                let mut straight =
-                    spawner.attachment(&item_collection.gray_pipe, AttachmentPointId::Next, parent);
-                if rand::random() {
-                    straight.attach(
-                        &item_collection.simple_manometer_icon,
-                        AttachmentPointId::Manometer,
-                    );
-                }
-                pipe_line.add_pipe(straight.build(&mut commands));
-            } else {
-                if rand::random() {
-                    pipe_line.add_pipe(
-                        spawner
-                            .attachment(
-                                &item_collection.gray_pipe_bent,
-                                AttachmentPointId::Next,
-                                parent,
-                            )
-                            .build(&mut commands),
-                    );
-                } else {
-                    pipe_line.add_pipe(
-                        spawner
-                            .attachment(
-                                &item_collection.gray_pipe_split,
-                                AttachmentPointId::Next,
-                                parent,
-                            )
-                            .build(&mut commands),
-                    );
-                }
+                straight.attach(
+                    &item_collection.simple_manometer_icon,
+                    AttachmentPointId::Manometer,
+                );
             }
+            pipe_line.add_pipe(straight.build(&mut commands), vec![AttachmentPointId::Next]);
         } else {
-            let transform = Transform::from_translation(Vec3::new(200.0, 40.0, 90.0));
-            *pipe_line = PipeLine::new(
-                spawner
-                    .item(&item_collection.gray_pipe)
-                    .transform(transform)
-                    .build(&mut commands),
-            );
+            if rand::random() {
+                pipe_line.add_pipe(
+                    spawner
+                        .attachment(
+                            &item_collection.gray_pipe_bent,
+                            AttachmentPointId::Next,
+                            parent,
+                        )
+                        .build(&mut commands),
+                    vec![AttachmentPointId::Next],
+                );
+            } else {
+                pipe_line.add_pipe(
+                    spawner
+                        .attachment(
+                            &item_collection.gray_pipe_split,
+                            AttachmentPointId::Next,
+                            parent,
+                        )
+                        .build(&mut commands),
+                    vec![AttachmentPointId::Next, AttachmentPointId::Previous],
+                );
+            }
         }
+    } else {
+        let transform = Transform::from_translation(Vec3::new(200.0, 40.0, 90.0));
+        *pipe_line = PipeLine::new(
+            spawner
+                .item(&item_collection.gray_pipe)
+                .transform(transform)
+                .build(&mut commands),
+            AttachmentPointId::Next,
+        );
+    }
     // }
 }

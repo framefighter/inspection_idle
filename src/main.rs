@@ -41,7 +41,7 @@ pub enum GameState {
     Game,
 }
 
-const TIMESTEP_1_PER_SECOND: f64 = 120.0 / 60.0;
+const TIMESTEP_1_PER_SECOND: f64 = 30.0 / 60.0;
 
 fn main() {
     let mut app = App::build();
@@ -113,7 +113,7 @@ fn main() {
             .with_system(add_waypoint.system()),
     )
     .add_system_set(
-        SystemSet::new()
+        SystemSet::on_update(GameState::Game)
             // This prints out "hello world" once every second
             .with_run_criteria(FixedTimestep::step(TIMESTEP_1_PER_SECOND))
             .with_system(inspection::build_pipe_line.system()),
